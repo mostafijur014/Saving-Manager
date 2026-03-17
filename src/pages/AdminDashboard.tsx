@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export const AdminDashboard = () => {
-  const { members, transactions, settings, loading } = useData();
+  const { members, transactions, settings, loading, error } = useData();
   const [healthStatus, setHealthStatus] = useState<any>(null);
 
   useEffect(() => {
@@ -63,6 +63,22 @@ export const AdminDashboard = () => {
   }, [statusMessage]);
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div></div>;
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+          <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-red-900 mb-2">Database Connection Error</h2>
+          <p className="text-red-700 max-w-2xl mx-auto">{error}</p>
+          <div className="mt-6 flex flex-col items-center gap-2 text-sm text-red-600">
+            <p>1. Ensure the <strong>Cloud Firestore API</strong> is enabled in Google Cloud Console.</p>
+            <p>2. Ensure you have <strong>created a Firestore database</strong> in the Firebase Console.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSaveMember = async (e: React.FormEvent) => {
     e.preventDefault();

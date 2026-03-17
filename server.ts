@@ -4,6 +4,21 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import admin from 'firebase-admin';
 import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp as initializeClientApp } from 'firebase/app';
+import { 
+  getFirestore as getClientFirestore, 
+  collection as clientCollection, 
+  getDocs as clientGetDocs, 
+  limit as clientLimit, 
+  query as clientQuery,
+  doc as clientDoc,
+  addDoc as clientAddDoc,
+  setDoc as clientSetDoc,
+  updateDoc as clientUpdateDoc,
+  deleteDoc as clientDeleteDoc,
+  getDoc as clientGetDoc,
+  serverTimestamp as clientServerTimestamp
+} from 'firebase/firestore';
 import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,15 +30,21 @@ const originalError = console.error;
 const originalWarn = console.warn;
 
 console.log = (...args) => {
-  logs.push(`[LOG] ${args.join(' ')}`);
+  const msg = `[LOG] ${args.join(' ')}`;
+  logs.push(msg);
+  fs.appendFileSync('server.log', msg + '\n');
   originalLog(...args);
 };
 console.error = (...args) => {
-  logs.push(`[ERROR] ${args.join(' ')}`);
+  const msg = `[ERROR] ${args.join(' ')}`;
+  logs.push(msg);
+  fs.appendFileSync('server.log', msg + '\n');
   originalError(...args);
 };
 console.warn = (...args) => {
-  logs.push(`[WARN] ${args.join(' ')}`);
+  const msg = `[WARN] ${args.join(' ')}`;
+  logs.push(msg);
+  fs.appendFileSync('server.log', msg + '\n');
   originalWarn(...args);
 };
 
@@ -38,72 +59,69 @@ async function startServer() {
 
   const PORT = 3000;
 
-  let db: admin.firestore.Firestore;
+  let db: any = null;
   let dbInitError: string | null = null;
+  let isClientDb = false;
 
-  try {
-    // Load Firebase Config
-    const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
-    if (!fs.existsSync(configPath)) {
-      throw new Error(`firebase-applet-config.json not found at ${configPath}`);
-    }
-    const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    console.log('Firebase config loaded for project:', firebaseConfig.projectId);
-
-    // Initialize Firebase Admin
-    if (!admin.apps.length) {
-      // In Cloud Run, initializeApp() without arguments uses application default credentials
-      // and automatically picks up the correct project ID.
-      admin.initializeApp();
-      console.log('Firebase Admin initialized with default credentials');
-    }
-
-    const dbId = firebaseConfig.firestoreDatabaseId;
-    console.log(`Initializing Firestore. Project: ${firebaseConfig.projectId}, Config Database: ${dbId || '(default)'}`);
-    
-    const tryInit = async (id?: string) => {
-      const dbInstance = id ? getFirestore(id) : getFirestore();
-      // Verify connection by attempting to read
-      const snap = await dbInstance.collection('members').limit(1).get();
-      return { dbInstance, empty: snap.empty };
-    };
-
+  // Initialize Database in background to prevent server hang
+  const initializeDatabase = async () => {
     try {
-      // 1. Try named database if provided
-      if (dbId && dbId !== '(default)') {
-        console.log(`Attempting named database: ${dbId}`);
-        const { dbInstance, empty } = await tryInit(dbId);
-        db = dbInstance;
-        console.log(`Firestore initialized with named database: ${dbId}. Empty: ${empty}`);
-      } else {
-        throw new Error('No named database in config');
+      // Load Firebase Config
+      const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+      if (!fs.existsSync(configPath)) {
+        throw new Error(`firebase-applet-config.json not found at ${configPath}`);
       }
-    } catch (namedErr: any) {
-      console.warn(`Named database attempt failed: ${namedErr.message}`);
+      const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      console.log('Firebase config loaded for project:', firebaseConfig.projectId);
+
+      const dbId = firebaseConfig.firestoreDatabaseId;
+      
+      // We'll use the Client SDK as the primary database because Admin SDK is having permission issues
+      console.log(`Initializing Firestore via Client SDK. Project: ${firebaseConfig.projectId}, Database: ${dbId || '(default)'}`);
+      
       try {
-        // 2. Try default database
-        console.log('Attempting default database...');
-        const { dbInstance, empty } = await tryInit();
-        db = dbInstance;
-        console.log(`Firestore initialized with default database. Empty: ${empty}`);
-      } catch (defaultErr: any) {
-        console.error('Default database also failed:', defaultErr.message);
-        dbInitError = `Firestore connection failed. Named: ${namedErr.message}. Default: ${defaultErr.message}`;
+        const clientApp = initializeClientApp(firebaseConfig);
+        const clientDb = getClientFirestore(clientApp, dbId === '(default)' ? undefined : dbId);
+        
+        // Test connection
+        console.log('Testing Firestore connection...');
+        const q = clientQuery(clientCollection(clientDb, 'members'), clientLimit(1));
+        const clientSnap = await clientGetDocs(q);
+        console.log(`Firestore initialized via Client SDK. Empty: ${clientSnap.empty}`);
+        
+        db = clientDb;
+        isClientDb = true;
+      } catch (clientErr: any) {
+        console.error(`Firestore initialization failed via Client SDK:`, clientErr.message);
+        if (clientErr.message.includes('Cloud Firestore API has not been used')) {
+          dbInitError = `Cloud Firestore API is disabled in project ${firebaseConfig.projectId}. Please enable it in the Google Cloud Console.`;
+        } else {
+          dbInitError = `Firestore connection failed: ${clientErr.message}`;
+        }
       }
+    } catch (error: any) {
+      console.error('Failed to load Firebase config or init Firestore:', error);
+      dbInitError = `Init failed: ${error.message}`;
     }
-  } catch (error: any) {
-    console.error('Failed to load Firebase config or init Admin:', error);
-    dbInitError = `Init failed: ${error.message}`;
-  }
+  };
+
+  // Start initialization but don't await it here
+  initializeDatabase();
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
+    let configProjectId = 'unknown';
+    try {
+      configProjectId = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'firebase-applet-config.json'), 'utf8')).projectId;
+    } catch (e) {}
+    
     res.json({ 
       status: 'ok', 
       timestamp: new Date().toISOString(),
       dbInitialized: !!db,
       dbInitError,
-      projectId: admin.apps[0]?.options.projectId
+      isClientDb,
+      configProjectId
     });
   });
 
@@ -125,18 +143,20 @@ async function startServer() {
   app.get('/api/admin/debug/members', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
-      const snapshot = await db.collection('members').get();
+      const snapshot = await clientGetDocs(clientCollection(db, 'members'));
       const docs = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
       res.json(docs);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
+
+  app.post('/api/admin/members', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
-      const docRef = await db.collection('members').add({
+      const docRef = await clientAddDoc(clientCollection(db, 'members'), {
         ...req.body,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: clientServerTimestamp()
       });
       res.json({ id: docRef.id });
     } catch (error: any) {
@@ -147,7 +167,7 @@ async function startServer() {
   app.put('/api/admin/members/:id', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
-      await db.collection('members').doc(req.params.id).update(req.body);
+      await clientUpdateDoc(clientDoc(db, 'members', req.params.id), req.body);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -157,7 +177,7 @@ async function startServer() {
   app.delete('/api/admin/members/:id', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
-      await db.collection('members').doc(req.params.id).delete();
+      await clientDeleteDoc(clientDoc(db, 'members', req.params.id));
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -167,9 +187,9 @@ async function startServer() {
   app.post('/api/admin/transactions', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
-      const docRef = await db.collection('transactions').add({
+      const docRef = await clientAddDoc(clientCollection(db, 'transactions'), {
         ...req.body,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: clientServerTimestamp()
       });
       res.json({ id: docRef.id });
     } catch (error: any) {
@@ -184,10 +204,10 @@ async function startServer() {
     
     try {
       // Diagnostic: Check if member exists
-      const memberRef = db.collection('members').doc(memberId);
+      const memberRef = clientDoc(db, 'members', memberId);
       console.log(`Fetching member doc: ${memberId}`);
-      const memberDoc = await memberRef.get();
-      if (!memberDoc.exists) {
+      const memberDoc = await clientGetDoc(memberRef);
+      if (!memberDoc.exists()) {
         console.error(`Member with ID ${memberId} not found in database`);
         return res.status(404).json({ error: `Member not found: ${memberId}` });
       }
@@ -195,18 +215,17 @@ async function startServer() {
 
       // 1. Add Transaction
       console.log('Adding transaction...');
-      const transRef = db.collection('transactions').doc();
-      await transRef.set({ 
+      await clientAddDoc(clientCollection(db, 'transactions'), { 
         memberId, 
         amount: Number(amount), 
         date, 
         month,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: clientServerTimestamp()
       });
       
       // 2. Update Member
       console.log('Updating member...');
-      await memberRef.set({ 
+      await clientSetDoc(memberRef, { 
         totalDeposited: Number(newTotal),
         lastPaymentDate: date
       }, { merge: true });
@@ -223,12 +242,13 @@ async function startServer() {
   app.post('/api/admin/settings', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
-      const settingsRef = db.collection('settings');
-      const snapshot = await settingsRef.limit(1).get();
+      const settingsColl = clientCollection(db, 'settings');
+      const q = clientQuery(settingsColl, clientLimit(1));
+      const snapshot = await clientGetDocs(q);
       if (snapshot.empty) {
-        await settingsRef.add(req.body);
+        await clientAddDoc(settingsColl, req.body);
       } else {
-        await settingsRef.doc(snapshot.docs[0].id).update(req.body);
+        await clientUpdateDoc(clientDoc(db, 'settings', snapshot.docs[0].id), req.body);
       }
       res.json({ success: true });
     } catch (error: any) {

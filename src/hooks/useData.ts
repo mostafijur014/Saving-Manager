@@ -31,6 +31,7 @@ export const useData = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [settings, setSettings] = useState<Settings>({ interestRate: 5, duration: 12 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let membersLoaded = false;
@@ -43,27 +44,29 @@ export const useData = () => {
       }
     };
 
+    const handleError = (err: any) => {
+      console.error('Firestore Error:', err);
+      if (err.code === 'permission-denied') {
+        setError('Database connection failed: Missing or insufficient permissions. Please ensure the Cloud Firestore API is enabled and the database is created in your project.');
+      } else {
+        setError(err.message || 'An unknown error occurred while fetching data.');
+      }
+      setLoading(false);
+    };
+
     const qMembers = query(collection(db, 'members'), orderBy('name'));
     const unsubMembers = onSnapshot(qMembers, (snapshot) => {
       setMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Member)));
       membersLoaded = true;
       checkLoading();
-    }, (err) => {
-      console.error(err);
-      membersLoaded = true;
-      checkLoading();
-    });
+    }, handleError);
 
     const qTransactions = query(collection(db, 'transactions'), orderBy('date', 'desc'));
     const unsubTransactions = onSnapshot(qTransactions, (snapshot) => {
       setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
       transactionsLoaded = true;
       checkLoading();
-    }, (err) => {
-      console.error(err);
-      transactionsLoaded = true;
-      checkLoading();
-    });
+    }, handleError);
 
     const unsubSettings = onSnapshot(collection(db, 'settings'), (snapshot) => {
       if (!snapshot.empty) {
@@ -71,11 +74,7 @@ export const useData = () => {
       }
       settingsLoaded = true;
       checkLoading();
-    }, (err) => {
-      console.error(err);
-      settingsLoaded = true;
-      checkLoading();
-    });
+    }, handleError);
 
     return () => {
       unsubMembers();
@@ -84,5 +83,5 @@ export const useData = () => {
     };
   }, []);
 
-  return { members, transactions, settings, loading };
+  return { members, transactions, settings, loading, error };
 };

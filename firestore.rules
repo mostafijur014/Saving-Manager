@@ -8,48 +8,25 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-        (request.auth.token.email == "admin@savings.com");
-    }
-
-    function isValidMember(data) {
-      return data.keys().hasAll(['name', 'memberId', 'monthlyContribution', 'totalDeposited', 'status']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.memberId is string &&
-             data.monthlyContribution is number && data.monthlyContribution >= 0 &&
-             data.totalDeposited is number && data.totalDeposited >= 0 &&
-             data.status in ['Active', 'Inactive'];
-    }
-
-    function isValidTransaction(data) {
-      return data.keys().hasAll(['memberId', 'amount', 'date', 'month']) &&
-             data.memberId is string &&
-             data.amount is number && data.amount > 0 &&
-             data.date is string &&
-             data.month is string;
-    }
-
-    function isValidSettings(data) {
-      return data.keys().hasAll(['interestRate', 'duration']) &&
-             data.interestRate is number && data.interestRate >= 0 &&
-             data.duration is number && data.duration > 0;
+        (request.auth.token.email == "mrmostafijur.bd@gmail.com");
     }
 
     // Members collection
     match /members/{memberId} {
       allow read: if true;
-      allow write: if false; // Only server-side admin can write
+      allow write: if true; // Required for server-side Client SDK writes
     }
 
     // Transactions collection
     match /transactions/{transactionId} {
       allow read: if true;
-      allow write: if false; // Only server-side admin can write
+      allow write: if true; // Required for server-side Client SDK writes
     }
 
     // Settings collection
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if false; // Only server-side admin can write
+      allow write: if true; // Required for server-side Client SDK writes
     }
   }
 }

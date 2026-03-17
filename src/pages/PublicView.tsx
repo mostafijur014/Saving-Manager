@@ -1,17 +1,33 @@
 import React, { useState } from 'react';
 import { useData } from '../hooks/useData';
 import { calculateInterest, formatCurrency } from '../utils/calculations';
-import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter } from 'lucide-react';
+import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter, AlertTriangle } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const PublicView = () => {
-  const { members, settings, loading } = useData();
+  const { members, settings, loading, error } = useData();
   const [searchTerm, setSearchTerm] = useState('');
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
+          <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-red-900 mb-2">Database Connection Error</h2>
+          <p className="text-red-700 max-w-2xl mx-auto">{error}</p>
+          <div className="mt-6 flex flex-col items-center gap-2 text-sm text-red-600">
+            <p>1. Ensure the <strong>Cloud Firestore API</strong> is enabled in Google Cloud Console.</p>
+            <p>2. Ensure you have <strong>created a Firestore database</strong> in the Firebase Console.</p>
+          </div>
+        </div>
       </div>
     );
   }
