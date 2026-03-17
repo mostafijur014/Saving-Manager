@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "admin@savings.com");
+    }
+
+    function isValidMember(data) {
+      return data.keys().hasAll(['name', 'memberId', 'monthlyContribution', 'totalDeposited', 'status']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.memberId is string &&
+             data.monthlyContribution is number && data.monthlyContribution >= 0 &&
+             data.totalDeposited is number && data.totalDeposited >= 0 &&
+             data.status in ['Active', 'Inactive'];
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['memberId', 'amount', 'date', 'month']) &&
+             data.memberId is string &&
+             data.amount is number && data.amount > 0 &&
+             data.date is string &&
+             data.month is string;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['interestRate', 'duration']) &&
+             data.interestRate is number && data.interestRate >= 0 &&
+             data.duration is number && data.duration > 0;
+    }
+
+    // Members collection
+    match /members/{memberId} {
+      allow read: if true;
+      allow write: if false; // Only server-side admin can write
+    }
+
+    // Transactions collection
+    match /transactions/{transactionId} {
+      allow read: if true;
+      allow write: if false; // Only server-side admin can write
+    }
+
+    // Settings collection
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if false; // Only server-side admin can write
+    }
+  }
+}
