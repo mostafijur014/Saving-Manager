@@ -100,12 +100,6 @@ export const PublicView = () => {
       <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center space-x-4">
           <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
-            <img 
-              src="input_file_0.png" 
-              alt="Together Dreams Logo" 
-              className="w-full h-full object-contain rounded-2xl shadow-lg ring-4 ring-indigo-50"
-              referrerPolicy="no-referrer"
-            />
           </div>
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Savings Group Overview</h1>
