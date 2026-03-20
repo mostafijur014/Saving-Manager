@@ -99,8 +99,6 @@ export const PublicView = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
-          </div>
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Savings Group Overview</h1>
             <p className="mt-1 text-lg text-gray-600">Transparent tracking of our collective growth.</p>
