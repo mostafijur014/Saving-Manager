@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { calculateInterest, formatCurrency } from '../utils/calculations';
-import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter, AlertTriangle, Calendar, X } from 'lucide-react';
+import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter, AlertTriangle, Calendar, X, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -9,6 +9,12 @@ export const PublicView = () => {
   const { members, transactions, settings, loading, error } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const getMonthsSinceStart = () => {
     if (!settings.startDate) return [];
@@ -91,18 +97,40 @@ export const PublicView = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Savings Group Overview</h1>
-          <p className="mt-2 text-lg text-gray-600">Transparent tracking of our collective growth and individual contributions.</p>
-        </div>
-        <div className="flex items-center bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 self-start md:self-center">
-          <Calendar className="w-5 h-5 text-indigo-600 mr-2" />
+      <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center space-x-4">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0">
+            <img 
+              src="input_file_0.png" 
+              alt="Together Dreams Logo" 
+              className="w-full h-full object-contain rounded-2xl shadow-lg ring-4 ring-indigo-50"
+              referrerPolicy="no-referrer"
+            />
+          </div>
           <div>
-            <p className="text-[10px] uppercase font-bold text-indigo-400 leading-none">Group Started</p>
-            <p className="text-sm font-bold text-indigo-700">
-              {settings.startDate ? new Date(settings.startDate + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Not Set'}
-            </p>
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Savings Group Overview</h1>
+            <p className="mt-1 text-lg text-gray-600">Transparent tracking of our collective growth.</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3 self-start md:self-center">
+          <div className="flex items-center bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100">
+            <Calendar className="w-5 h-5 text-indigo-600 mr-2" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-indigo-400 leading-none">Group Started</p>
+              <p className="text-sm font-bold text-indigo-700">
+                {settings.startDate ? new Date(settings.startDate + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Not Set'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+            <Clock className="w-5 h-5 text-indigo-600 mr-2" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-gray-400 leading-none">Current Time</p>
+              <p className="text-sm font-bold text-gray-700">
+                {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} • {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </p>
+            </div>
           </div>
         </div>
       </header>

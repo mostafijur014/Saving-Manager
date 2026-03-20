@@ -6,7 +6,7 @@ import { calculateInterest, formatCurrency } from '../utils/calculations';
 import { 
   Plus, Edit2, Trash2, Settings as SettingsIcon, 
   CheckCircle, XCircle, AlertCircle, Download, Save, X,
-  Calendar
+  Calendar, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -23,6 +23,12 @@ export const AdminDashboard = () => {
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositMonth, setDepositMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
   
   // Member Form State
   const [memberForm, setMemberForm] = useState({
@@ -36,7 +42,12 @@ export const AdminDashboard = () => {
   const [settingsForm, setSettingsForm] = useState({
     interestRate: 5,
     duration: 12,
-    startDate: new Date().toISOString().slice(0, 7)
+    startDate: new Date().toISOString().slice(0, 7),
+    announcement: '',
+    showAnnouncement: false,
+    announcementSpeed: 40,
+    tagline1: '',
+    tagline2: ''
   });
 
   // Sync settings form when data loads
@@ -45,7 +56,12 @@ export const AdminDashboard = () => {
       setSettingsForm({
         interestRate: settings.interestRate,
         duration: settings.duration,
-        startDate: settings.startDate || new Date().toISOString().slice(0, 7)
+        startDate: settings.startDate || new Date().toISOString().slice(0, 7),
+        announcement: settings.announcement || '',
+        showAnnouncement: settings.showAnnouncement || false,
+        announcementSpeed: settings.announcementSpeed || 40,
+        tagline1: settings.tagline1 || '',
+        tagline2: settings.tagline2 || ''
       });
     }
   }, [settings]);
@@ -180,6 +196,11 @@ export const AdminDashboard = () => {
       const data = {
         interestRate: Number(settingsForm.interestRate),
         duration: Number(settingsForm.duration),
+        announcement: settingsForm.announcement,
+        showAnnouncement: settingsForm.showAnnouncement,
+        announcementSpeed: Number(settingsForm.announcementSpeed),
+        tagline1: settingsForm.tagline1,
+        tagline2: settingsForm.tagline2,
         updatedAt: new Date().toISOString()
       };
 
@@ -258,11 +279,22 @@ export const AdminDashboard = () => {
           <p className="text-gray-500">Manage members, deposits, and system settings.</p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-center bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100">
-            <Calendar className="w-4 h-4 text-indigo-600 mr-2" />
-            <div>
-              <p className="text-[10px] uppercase font-bold text-indigo-400 leading-none">Group Started</p>
-              <p className="text-sm font-bold text-indigo-700">{new Date(settings.startDate + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100">
+              <Calendar className="w-4 h-4 text-indigo-600 mr-2" />
+              <div>
+                <p className="text-[10px] uppercase font-bold text-indigo-400 leading-none">Group Started</p>
+                <p className="text-sm font-bold text-indigo-700">{new Date(settings.startDate + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+              </div>
+            </div>
+            <div className="flex items-center bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+              <Clock className="w-4 h-4 text-indigo-600 mr-2" />
+              <div>
+                <p className="text-[10px] uppercase font-bold text-gray-400 leading-none">Current Time</p>
+                <p className="text-sm font-bold text-gray-700">
+                  {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} • {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </p>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -328,6 +360,71 @@ export const AdminDashboard = () => {
           >
             <Save className="w-4 h-4 mr-2" /> Save Settings
           </button>
+        </div>
+        
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-md font-semibold text-gray-900">Announcement Bar</h3>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="sr-only peer"
+                checked={settingsForm.showAnnouncement}
+                onChange={(e) => setSettingsForm({...settingsForm, showAnnouncement: e.target.checked})}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <span className="ml-3 text-sm font-medium text-gray-700">{settingsForm.showAnnouncement ? 'Visible' : 'Hidden'}</span>
+            </label>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-grow">
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Announcement Text</label>
+              <textarea 
+                value={settingsForm.announcement} 
+                onChange={(e) => setSettingsForm({...settingsForm, announcement: e.target.value})}
+                placeholder="Enter announcement text here..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 min-h-[80px]"
+              />
+            </div>
+            <div className="w-32">
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Speed (Sec)</label>
+              <input 
+                type="number" 
+                value={settingsForm.announcementSpeed} 
+                onChange={(e) => setSettingsForm({...settingsForm, announcementSpeed: Number(e.target.value)})}
+                min="5"
+                max="200"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Higher = Slower</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <h3 className="text-md font-semibold text-gray-900 mb-4">Branding & Taglines</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Primary Tagline (Main Title)</label>
+              <input 
+                type="text" 
+                value={settingsForm.tagline1} 
+                onChange={(e) => setSettingsForm({...settingsForm, tagline1: e.target.value})}
+                placeholder="e.g., Together Dreams"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Secondary Tagline (Subtitle)</label>
+              <input 
+                type="text" 
+                value={settingsForm.tagline2} 
+                onChange={(e) => setSettingsForm({...settingsForm, tagline2: e.target.value})}
+                placeholder="e.g., Collective savings, strong future"
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+          </div>
         </div>
       </div>
 

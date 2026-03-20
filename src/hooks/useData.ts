@@ -25,6 +25,11 @@ export interface Settings {
   interestRate: number;
   duration: number;
   startDate: string;
+  announcement?: string;
+  showAnnouncement?: boolean;
+  announcementSpeed?: number;
+  tagline1?: string;
+  tagline2?: string;
 }
 
 export const useData = () => {
@@ -33,7 +38,10 @@ export const useData = () => {
   const [settings, setSettings] = useState<Settings>({ 
     interestRate: 5, 
     duration: 12,
-    startDate: new Date().toISOString().slice(0, 7) // Default to current month
+    startDate: new Date().toISOString().slice(0, 7), // Default to current month
+    announcementSpeed: 40, // Default speed
+    tagline1: 'Together Dreams',
+    tagline2: 'Collective savings, strong future'
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

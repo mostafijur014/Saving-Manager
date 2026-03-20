@@ -30,8 +30,13 @@ export const Login = () => {
         className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-gray-100"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-8 h-8 text-indigo-600" />
+          <div className="w-20 h-20 mx-auto mb-4">
+            <img 
+              src="input_file_0.png" 
+              alt="Together Dreams Logo" 
+              className="w-full h-full object-contain rounded-2xl shadow-md ring-2 ring-indigo-50"
+              referrerPolicy="no-referrer"
+            />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Admin Access</h2>
           <p className="mt-2 text-gray-600">Enter your secret credentials to login.</p>
