@@ -34,9 +34,10 @@
       "properties": {
         "interestRate": { "type": "number", "description": "Annual interest rate in percentage" },
         "duration": { "type": "number", "description": "Duration in months for DPS calculation" },
+        "startDate": { "type": "string", "description": "The month the savings group started (e.g., '2023-01')" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["interestRate", "duration"]
+      "required": ["interestRate", "duration", "startDate"]
     }
   },
   "firestore": {

@@ -5,7 +5,8 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp 
 import { calculateInterest, formatCurrency } from '../utils/calculations';
 import { 
   Plus, Edit2, Trash2, Settings as SettingsIcon, 
-  CheckCircle, XCircle, AlertCircle, Download, Save, X
+  CheckCircle, XCircle, AlertCircle, Download, Save, X,
+  Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -21,6 +22,7 @@ export const AdminDashboard = () => {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
+  const [depositMonth, setDepositMonth] = useState(new Date().toISOString().slice(0, 7));
   
   // Member Form State
   const [memberForm, setMemberForm] = useState({
@@ -33,7 +35,8 @@ export const AdminDashboard = () => {
   // Settings Form State
   const [settingsForm, setSettingsForm] = useState({
     interestRate: 5,
-    duration: 12
+    duration: 12,
+    startDate: new Date().toISOString().slice(0, 7)
   });
 
   // Sync settings form when data loads
@@ -41,10 +44,20 @@ export const AdminDashboard = () => {
     if (settings) {
       setSettingsForm({
         interestRate: settings.interestRate,
-        duration: settings.duration
+        duration: settings.duration,
+        startDate: settings.startDate || new Date().toISOString().slice(0, 7)
       });
     }
   }, [settings]);
+
+  const getMonthsSinceStart = () => {
+    if (!settings.startDate) return 0;
+    const start = new Date(settings.startDate + '-01');
+    const now = new Date();
+    return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1;
+  };
+
+  const expectedMonths = getMonthsSinceStart();
 
   // Auto-clear status message
   useEffect(() => {
@@ -130,7 +143,7 @@ export const AdminDashboard = () => {
     }
 
     const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const month = depositMonth;
 
     try {
       const currentTotal = Number(member.totalDeposited) || 0;
@@ -171,16 +184,25 @@ export const AdminDashboard = () => {
       };
 
       if (settings && (settings as any).id) {
-        await updateDoc(doc(db, 'settings', (settings as any).id), data);
+        await updateDoc(doc(db, 'settings', (settings as any).id), {
+          ...data,
+          startDate: settingsForm.startDate
+        });
       } else {
         // Find existing settings doc if any
         const { getDocs, query, limit } = await import('firebase/firestore');
         const q = query(settingsColl, limit(1));
         const snapshot = await getDocs(q);
         if (snapshot.empty) {
-          await addDoc(settingsColl, data);
+          await addDoc(settingsColl, {
+            ...data,
+            startDate: settingsForm.startDate
+          });
         } else {
-          await updateDoc(doc(db, 'settings', snapshot.docs[0].id), data);
+          await updateDoc(doc(db, 'settings', snapshot.docs[0].id), {
+            ...data,
+            startDate: settingsForm.startDate
+          });
         }
       }
       
@@ -211,7 +233,9 @@ export const AdminDashboard = () => {
 
   const chartData = last6Months.map(month => ({
     month,
-    amount: transactions.filter(t => t.month === month).reduce((sum, t) => sum + t.amount, 0)
+    amount: transactions
+      .filter(t => t.month === month && members.some(m => m.id === t.memberId))
+      .reduce((sum, t) => sum + t.amount, 0)
   }));
 
   const totalDeposited = members.reduce((sum, m) => sum + m.totalDeposited, 0);
@@ -233,25 +257,34 @@ export const AdminDashboard = () => {
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-500">Manage members, deposits, and system settings.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button 
-            onClick={() => { setEditingMember(null); setMemberForm({ name: '', memberId: '', monthlyContribution: '', status: 'Active' }); setIsMemberModalOpen(true); }}
-            className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4 mr-2" /> Add Member
-          </button>
-          <button 
-            onClick={() => setIsDepositModalOpen(true)}
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all shadow-sm"
-          >
-            <span className="w-4 h-4 mr-2 flex items-center justify-center font-bold">৳</span> New Deposit
-          </button>
-          <button 
-            onClick={exportToCSV}
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
-          >
-            <Download className="w-4 h-4 mr-2" /> Export
-          </button>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex items-center bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100">
+            <Calendar className="w-4 h-4 text-indigo-600 mr-2" />
+            <div>
+              <p className="text-[10px] uppercase font-bold text-indigo-400 leading-none">Group Started</p>
+              <p className="text-sm font-bold text-indigo-700">{new Date(settings.startDate + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button 
+              onClick={() => { setEditingMember(null); setMemberForm({ name: '', memberId: '', monthlyContribution: '', status: 'Active' }); setIsMemberModalOpen(true); }}
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm"
+            >
+              <Plus className="w-4 h-4 mr-2" /> Add Member
+            </button>
+            <button 
+              onClick={() => setIsDepositModalOpen(true)}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all shadow-sm"
+            >
+              <span className="w-4 h-4 mr-2 flex items-center justify-center font-bold">৳</span> New Deposit
+            </button>
+            <button 
+              onClick={exportToCSV}
+              className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
+            >
+              <Download className="w-4 h-4 mr-2" /> Export
+            </button>
+          </div>
         </div>
       </div>
 
@@ -261,7 +294,7 @@ export const AdminDashboard = () => {
           <SettingsIcon className="w-5 h-5 text-gray-400 mr-2" />
           <h2 className="text-lg font-semibold text-gray-900">Global Interest Settings</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
           <div>
             <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Interest Rate (%)</label>
             <input 
@@ -277,6 +310,15 @@ export const AdminDashboard = () => {
               type="number" 
               value={settingsForm.duration} 
               onChange={(e) => setSettingsForm({...settingsForm, duration: Number(e.target.value)})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Start Month</label>
+            <input 
+              type="month" 
+              value={settingsForm.startDate} 
+              onChange={(e) => setSettingsForm({...settingsForm, startDate: e.target.value})}
               className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
             />
           </div>
@@ -341,7 +383,7 @@ export const AdminDashboard = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monthly</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Paid</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Months Paid</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
@@ -366,15 +408,30 @@ export const AdminDashboard = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
                     {formatCurrency(member.totalDeposited)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {member.lastPaymentDate ? new Date(member.lastPaymentDate).toLocaleDateString() : 'Never'}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-wrap gap-1 max-w-[150px]">
+                      {transactions.filter(t => t.memberId === member.id).map(t => (
+                        <span key={t.id} className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded border border-indigo-100">
+                          {t.month.split('-')[1]}/{t.month.split('-')[0].slice(2)}
+                        </span>
+                      ))}
+                      {transactions.filter(t => t.memberId === member.id).length === 0 && (
+                        <span className="text-xs text-gray-400 italic">No payments</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      member.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {member.status}
-                    </span>
+                    {(() => {
+                      const paidCount = transactions.filter(t => t.memberId === member.id).length;
+                      const isBehind = paidCount < expectedMonths;
+                      return (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          !isBehind ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {isBehind ? `${expectedMonths - paidCount} Months Due` : 'Up to Date'}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
@@ -507,6 +564,16 @@ export const AdminDashboard = () => {
                       placeholder="0.00"
                     />
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
+                  <input 
+                    required 
+                    type="month" 
+                    value={depositMonth} 
+                    onChange={(e) => setDepositMonth(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500" 
+                  />
                 </div>
                 <div className="pt-4 flex gap-3">
                   <button type="button" onClick={() => setIsDepositModalOpen(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50">Cancel</button>

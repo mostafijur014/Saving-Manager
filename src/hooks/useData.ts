@@ -24,12 +24,17 @@ export interface Transaction {
 export interface Settings {
   interestRate: number;
   duration: number;
+  startDate: string;
 }
 
 export const useData = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [settings, setSettings] = useState<Settings>({ interestRate: 5, duration: 12 });
+  const [settings, setSettings] = useState<Settings>({ 
+    interestRate: 5, 
+    duration: 12,
+    startDate: new Date().toISOString().slice(0, 7) // Default to current month
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

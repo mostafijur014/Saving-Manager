@@ -1,12 +1,45 @@
 import React, { useState } from 'react';
 import { useData } from '../hooks/useData';
 import { calculateInterest, formatCurrency } from '../utils/calculations';
-import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter, AlertTriangle } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter, AlertTriangle, Calendar, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export const PublicView = () => {
-  const { members, settings, loading, error } = useData();
+  const { members, transactions, settings, loading, error } = useData();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<string | null>(null);
+
+  const getMonthsSinceStart = () => {
+    if (!settings.startDate) return [];
+    const start = new Date(settings.startDate + '-01');
+    const now = new Date();
+    const months = [];
+    let current = new Date(start);
+    
+    while (current <= now) {
+      months.push(current.toISOString().slice(0, 7));
+      current.setMonth(current.getMonth() + 1);
+    }
+    return months.reverse(); // Newest first
+  };
+
+  const allMonths = getMonthsSinceStart();
+  const last3Months = allMonths.slice(0, 3).reverse(); // Oldest of last 3 first for display
+
+  // Chart Data: Last 6 months collection
+  const last6Months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }).reverse();
+
+  const chartData = last6Months.map(month => ({
+    month,
+    amount: transactions
+      .filter(t => t.month === month && members.some(m => m.id === t.memberId))
+      .reduce((sum, t) => sum + t.amount, 0)
+  }));
 
   if (loading) {
     return (
@@ -58,9 +91,20 @@ export const PublicView = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <header className="mb-10 text-center sm:text-left">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Savings Group Overview</h1>
-        <p className="mt-2 text-lg text-gray-600">Transparent tracking of our collective growth and individual contributions.</p>
+      <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Savings Group Overview</h1>
+          <p className="mt-2 text-lg text-gray-600">Transparent tracking of our collective growth and individual contributions.</p>
+        </div>
+        <div className="flex items-center bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 self-start md:self-center">
+          <Calendar className="w-5 h-5 text-indigo-600 mr-2" />
+          <div>
+            <p className="text-[10px] uppercase font-bold text-indigo-400 leading-none">Group Started</p>
+            <p className="text-sm font-bold text-indigo-700">
+              {settings.startDate ? new Date(settings.startDate + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Not Set'}
+            </p>
+          </div>
+        </div>
       </header>
 
       {/* Stats Grid */}
@@ -82,6 +126,29 @@ export const PublicView = () => {
             </div>
           </motion.div>
         ))}
+      </div>
+
+      {/* Monthly Collection Growth Chart */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-10">
+        <h3 className="text-lg font-semibold mb-6">Monthly Collection Growth</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} />
+              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} />
+              <Tooltip 
+                cursor={{fill: '#f9fafb'}}
+                contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+              />
+              <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#4f46e5' : '#c7d2fe'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Search and Filter */}
@@ -111,8 +178,7 @@ export const PublicView = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Member</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Status</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Deposited</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Interest</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Final Balance</th>
@@ -130,12 +196,29 @@ export const PublicView = () => {
                   <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{member.name}</div>
+                      <div className="text-xs text-gray-500">{member.memberId}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {member.memberId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      {formatCurrency(member.monthlyContribution)}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div 
+                        className="flex gap-1 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setSelectedMemberForDetails(member.id)}
+                      >
+                        {last3Months.map(month => {
+                          const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === month);
+                          const totalForMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                          let bgColor = 'bg-red-500';
+                          if (totalForMonth >= member.monthlyContribution) bgColor = 'bg-blue-600';
+                          else if (totalForMonth > 0) bgColor = 'bg-yellow-500';
+                          
+                          return (
+                            <div key={month} className="flex flex-col items-center">
+                              <div className={`w-3 h-3 rounded-full ${bgColor}`} title={`${month}: ${formatCurrency(totalForMonth)}`} />
+                              <span className="text-[8px] text-gray-400 mt-0.5">{month.split('-')[1]}/{month.split('-')[0].slice(2)}</span>
+                            </div>
+                          );
+                        })}
+                        <span className="text-[10px] text-indigo-600 font-bold ml-1 self-center">Details</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrency(member.totalDeposited)}
@@ -165,6 +248,86 @@ export const PublicView = () => {
           </div>
         )}
       </div>
+      {/* Member Details Modal */}
+      <AnimatePresence>
+        {selectedMemberForDetails && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+            >
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-indigo-600 text-white">
+                <div>
+                  <h3 className="text-lg font-bold">Payment History</h3>
+                  <p className="text-xs text-indigo-100">
+                    {members.find(m => m.id === selectedMemberForDetails)?.name} ({members.find(m => m.id === selectedMemberForDetails)?.memberId})
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setSelectedMemberForDetails(null)}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="p-6 max-h-[60vh] overflow-y-auto">
+                <div className="space-y-3">
+                  {allMonths.map(month => {
+                    const member = members.find(m => m.id === selectedMemberForDetails);
+                    if (!member) return null;
+                    
+                    const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === month);
+                    const totalForMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                    
+                    let statusText = 'Not Paid';
+                    let statusColor = 'text-red-600 bg-red-50 border-red-100';
+                    let dotColor = 'bg-red-500';
+                    
+                    if (totalForMonth >= member.monthlyContribution) {
+                      statusText = 'Fully Paid';
+                      statusColor = 'text-blue-700 bg-blue-50 border-blue-100';
+                      dotColor = 'bg-blue-600';
+                    } else if (totalForMonth > 0) {
+                      statusText = 'Partial Payment';
+                      statusColor = 'text-yellow-700 bg-yellow-50 border-yellow-100';
+                      dotColor = 'bg-yellow-500';
+                    }
+
+                    return (
+                      <div key={month} className={`flex items-center justify-between p-3 rounded-xl border ${statusColor}`}>
+                        <div className="flex items-center">
+                          <div className={`w-2.5 h-2.5 rounded-full ${dotColor} mr-3`} />
+                          <div>
+                            <p className="text-sm font-bold">
+                              {new Date(month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </p>
+                            <p className="text-[10px] opacity-70 uppercase font-bold tracking-wider">
+                              Target: {formatCurrency(member.monthlyContribution)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black">{formatCurrency(totalForMonth)}</p>
+                          <p className="text-[10px] font-bold uppercase">{statusText}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-center gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                <div className="flex items-center"><div className="w-2 h-2 rounded-full bg-blue-600 mr-1" /> Paid</div>
+                <div className="flex items-center"><div className="w-2 h-2 rounded-full bg-yellow-500 mr-1" /> Partial</div>
+                <div className="flex items-center"><div className="w-2 h-2 rounded-full bg-red-500 mr-1" /> Due</div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
