@@ -12,14 +12,6 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 export const AdminDashboard = () => {
   const { members, transactions, settings, loading, error } = useData();
-  const [healthStatus, setHealthStatus] = useState<any>(null);
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then(res => res.json())
-      .then(data => setHealthStatus(data))
-      .catch(err => console.error('Health check failed:', err));
-  }, []);
 
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
@@ -93,19 +85,14 @@ export const AdminDashboard = () => {
     };
 
     try {
-      const url = editingMember ? `/api/admin/members/${editingMember.id}` : '/api/admin/members';
-      const method = editingMember ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic admin:savings2026'
-        },
-        body: JSON.stringify(data)
-      });
-
-      if (!response.ok) throw new Error('Failed to save member');
+      if (editingMember) {
+        await updateDoc(doc(db, 'members', editingMember.id), data);
+      } else {
+        await addDoc(collection(db, 'members'), {
+          ...data,
+          createdAt: serverTimestamp()
+        });
+      }
 
       setStatusMessage({ type: 'success', text: `Member ${editingMember ? 'updated' : 'added'} successfully` });
       setIsMemberModalOpen(false);
@@ -113,7 +100,7 @@ export const AdminDashboard = () => {
       setMemberForm({ name: '', memberId: '', monthlyContribution: '', status: 'Active' });
     } catch (err) {
       console.error(err);
-      setStatusMessage({ type: 'error', text: 'Error saving member' });
+      setStatusMessage({ type: 'error', text: 'Error saving member: ' + (err instanceof Error ? err.message : 'Unknown error') });
     }
   };
 
@@ -121,19 +108,13 @@ export const AdminDashboard = () => {
     if (!memberToDelete) return;
     
     try {
-      const response = await fetch(`/api/admin/members/${memberToDelete}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': 'Basic admin:savings2026'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to delete member');
+      await deleteDoc(doc(db, 'members', memberToDelete));
       setStatusMessage({ type: 'success', text: 'Member deleted successfully' });
       setIsConfirmDeleteOpen(false);
       setMemberToDelete(null);
     } catch (err) {
       console.error(err);
-      setStatusMessage({ type: 'error', text: 'Error deleting member' });
+      setStatusMessage({ type: 'error', text: 'Error deleting member: ' + (err instanceof Error ? err.message : 'Unknown error') });
     }
   };
 
@@ -153,25 +134,22 @@ export const AdminDashboard = () => {
 
     try {
       const currentTotal = Number(member.totalDeposited) || 0;
-      const response = await fetch('/api/admin/deposit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic admin:savings2026'
-        },
-        body: JSON.stringify({
-          memberId: selectedMemberId,
-          amount,
-          date: now.toISOString(),
-          month,
-          newTotal: currentTotal + amount
-        })
+      const newTotal = currentTotal + amount;
+
+      // 1. Add Transaction
+      await addDoc(collection(db, 'transactions'), {
+        memberId: selectedMemberId,
+        amount,
+        date: now.toISOString(),
+        month,
+        createdAt: serverTimestamp()
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process deposit');
-      }
+      // 2. Update Member
+      await updateDoc(doc(db, 'members', selectedMemberId), {
+        totalDeposited: newTotal,
+        lastPaymentDate: now.toISOString()
+      });
 
       setStatusMessage({ type: 'success', text: 'Deposit confirmed successfully' });
       setIsDepositModalOpen(false);
@@ -185,24 +163,31 @@ export const AdminDashboard = () => {
 
   const handleUpdateSettings = async () => {
     try {
-      const response = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Basic admin:savings2026'
-        },
-        body: JSON.stringify({
-          interestRate: Number(settingsForm.interestRate),
-          duration: Number(settingsForm.duration),
-          updatedAt: new Date().toISOString()
-        })
-      });
+      const settingsColl = collection(db, 'settings');
+      const data = {
+        interestRate: Number(settingsForm.interestRate),
+        duration: Number(settingsForm.duration),
+        updatedAt: new Date().toISOString()
+      };
 
-      if (!response.ok) throw new Error('Failed to update settings');
+      if (settings && (settings as any).id) {
+        await updateDoc(doc(db, 'settings', (settings as any).id), data);
+      } else {
+        // Find existing settings doc if any
+        const { getDocs, query, limit } = await import('firebase/firestore');
+        const q = query(settingsColl, limit(1));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+          await addDoc(settingsColl, data);
+        } else {
+          await updateDoc(doc(db, 'settings', snapshot.docs[0].id), data);
+        }
+      }
+      
       setStatusMessage({ type: 'success', text: 'Settings updated successfully' });
     } catch (err) {
       console.error(err);
-      setStatusMessage({ type: 'error', text: 'Error updating settings' });
+      setStatusMessage({ type: 'error', text: 'Error updating settings: ' + (err instanceof Error ? err.message : 'Unknown error') });
     }
   };
 
@@ -243,15 +228,6 @@ export const AdminDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {healthStatus && !healthStatus.dbInitialized && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700">
-          <div className="flex items-center font-bold mb-1">
-            <AlertCircle className="w-5 h-5 mr-2" />
-            Server Database Error
-          </div>
-          <p className="text-sm">The server failed to initialize the database: {healthStatus.dbInitError || 'Unknown error'}</p>
-        </div>
-      )}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
