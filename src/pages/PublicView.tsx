@@ -10,6 +10,7 @@ export const PublicView = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [viewMonth, setViewMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -31,6 +32,13 @@ export const PublicView = () => {
   };
 
   const allMonths = getMonthsSinceStart();
+
+  useEffect(() => {
+    if (allMonths.length > 0 && !allMonths.includes(viewMonth)) {
+      setViewMonth(allMonths[0]);
+    }
+  }, [allMonths, viewMonth]);
+
   const last3Months = allMonths.slice(0, 3).reverse(); // Oldest of last 3 first for display
 
   // Chart Data: Last 6 months collection
@@ -172,22 +180,45 @@ export const PublicView = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-96">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+      <div className="mb-6 flex flex-col lg:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+          <div className="relative w-full sm:w-80">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
+              placeholder="Search members..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all"
-            placeholder="Search members by name or ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          
+          <div className="relative w-full sm:w-48">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Calendar className="h-4 w-4 text-gray-400" />
+            </div>
+            <select
+              value={viewMonth}
+              onChange={(e) => setViewMonth(e.target.value)}
+              className="block w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-all appearance-none"
+            >
+              {allMonths.map(month => (
+                <option key={month} value={month}>
+                  {new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="flex items-center text-sm text-gray-500">
-          <Filter className="w-4 h-4 mr-1" />
-          Showing {filteredMembers.length} of {members.length} members
+
+        <div className="flex items-center text-sm text-gray-500 bg-white px-4 py-2 rounded-xl border border-gray-100 shadow-sm">
+          <Filter className="w-4 h-4 mr-2 text-indigo-500" />
+          <span className="font-medium text-gray-700">{filteredMembers.length}</span>
+          <span className="mx-1">of</span>
+          <span className="font-medium text-gray-700">{members.length}</span>
+          <span className="ml-1">members</span>
         </div>
       </div>
 
@@ -198,25 +229,39 @@ export const PublicView = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Member</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Target</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Paid ({new Date(viewMonth + '-01').toLocaleDateString('en-US', { month: 'short' })})</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Status</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Deposited</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Interest</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Final Balance</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMembers.map((member) => {
-                const { finalBalance, interestEarned } = calculateInterest(
+                const { finalBalance } = calculateInterest(
                   member.totalDeposited,
                   settings.interestRate,
                   settings.duration
                 );
+                
+                const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === viewMonth);
+                const totalForViewMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                const isPaidInViewMonth = totalForViewMonth >= member.monthlyContribution;
+
                 return (
                   <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                      <div className="text-xs text-gray-500">{member.memberId}</div>
+                      <div className="text-sm font-bold text-gray-900">{member.name}</div>
+                      <div className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{member.memberId}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatCurrency(member.monthlyContribution)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm font-bold ${isPaidInViewMonth ? 'text-green-600' : totalForViewMonth > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {formatCurrency(totalForViewMonth)}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div 
@@ -242,9 +287,6 @@ export const PublicView = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatCurrency(member.totalDeposited)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-amber-600 font-medium">
-                      +{formatCurrency(interestEarned)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 font-bold">
                       {formatCurrency(finalBalance)}
