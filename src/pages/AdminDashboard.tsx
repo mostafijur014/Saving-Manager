@@ -6,7 +6,8 @@ import { calculateInterest, formatCurrency } from '../utils/calculations';
 import { 
   Plus, Edit2, Trash2, Settings as SettingsIcon, 
   CheckCircle, XCircle, AlertCircle, Download, Save, X,
-  Calendar, Clock, Phone
+  Calendar, Clock, Phone, ChevronDown, ChevronUp,
+  AlertTriangle, PiggyBank, Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -49,9 +50,21 @@ export const AdminDashboard = () => {
     announcementSpeed: 40,
     tagline1: '',
     tagline2: '',
+    showContactPersons: true,
     contactPerson1: { name: '', role: '', phone: '', email: '', imageUrl: '' },
     contactPerson2: { name: '', role: '', phone: '', email: '', imageUrl: '' }
   });
+
+  const [expandedSections, setExpandedSections] = useState({
+    interest: true,
+    announcement: false,
+    branding: false,
+    contact: false
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Sync settings form when data loads
   useEffect(() => {
@@ -65,6 +78,7 @@ export const AdminDashboard = () => {
         announcementSpeed: settings.announcementSpeed || 40,
         tagline1: settings.tagline1 || '',
         tagline2: settings.tagline2 || '',
+        showContactPersons: settings.showContactPersons !== undefined ? settings.showContactPersons : true,
         contactPerson1: settings.contactPerson1 || { name: '', role: '', phone: '', email: '', imageUrl: '' },
         contactPerson2: settings.contactPerson2 || { name: '', role: '', phone: '', email: '', imageUrl: '' }
       });
@@ -207,6 +221,7 @@ export const AdminDashboard = () => {
         announcementSpeed: Number(settingsForm.announcementSpeed),
         tagline1: settingsForm.tagline1,
         tagline2: settingsForm.tagline2,
+        showContactPersons: settingsForm.showContactPersons,
         contactPerson1: settingsForm.contactPerson1,
         contactPerson2: settingsForm.contactPerson2,
         updatedAt: new Date().toISOString()
@@ -329,279 +344,378 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Settings Section */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-        <div className="flex items-center mb-4">
-          <SettingsIcon className="w-5 h-5 text-gray-400 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">Global Interest Settings</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+        {/* Global Interest Settings Header */}
+        <div 
+          className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+          onClick={() => toggleSection('interest')}
+        >
+          <div className="flex items-center">
+            <SettingsIcon className="w-5 h-5 text-indigo-500 mr-2" />
+            <h2 className="text-lg font-semibold text-gray-900">Global Interest Settings</h2>
+          </div>
+          {expandedSections.interest ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Interest Rate (%)</label>
-            <input 
-              type="number" 
-              value={settingsForm.interestRate} 
-              onChange={(e) => setSettingsForm({...settingsForm, interestRate: Number(e.target.value)})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Duration (Months)</label>
-            <input 
-              type="number" 
-              value={settingsForm.duration} 
-              onChange={(e) => setSettingsForm({...settingsForm, duration: Number(e.target.value)})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Start Month</label>
-            <input 
-              type="month" 
-              value={settingsForm.startDate} 
-              onChange={(e) => setSettingsForm({...settingsForm, startDate: e.target.value})}
-              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          <button 
-            onClick={handleUpdateSettings}
-            className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-100 transition-all"
-          >
-            <Save className="w-4 h-4 mr-2" /> Save Settings
-          </button>
-        </div>
+
+        <AnimatePresence>
+          {expandedSections.interest && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="px-6 pb-6"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Interest Rate (%)</label>
+                  <input 
+                    type="number" 
+                    value={settingsForm.interestRate} 
+                    onChange={(e) => setSettingsForm({...settingsForm, interestRate: Number(e.target.value)})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Duration (Months)</label>
+                  <input 
+                    type="number" 
+                    value={settingsForm.duration} 
+                    onChange={(e) => setSettingsForm({...settingsForm, duration: Number(e.target.value)})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Start Month</label>
+                  <input 
+                    type="month" 
+                    value={settingsForm.startDate} 
+                    onChange={(e) => setSettingsForm({...settingsForm, startDate: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <button 
+                  onClick={handleUpdateSettings}
+                  className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-100 transition-all"
+                >
+                  <Save className="w-4 h-4 mr-2" /> Save Settings
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-md font-semibold text-gray-900">Announcement Bar</h3>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="sr-only peer"
-                checked={settingsForm.showAnnouncement}
-                onChange={(e) => setSettingsForm({...settingsForm, showAnnouncement: e.target.checked})}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-              <span className="ml-3 text-sm font-medium text-gray-700">{settingsForm.showAnnouncement ? 'Visible' : 'Hidden'}</span>
-            </label>
-          </div>
-          <div className="flex gap-4">
-            <div className="flex-grow">
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Announcement Text</label>
-              <textarea 
-                value={settingsForm.announcement} 
-                onChange={(e) => setSettingsForm({...settingsForm, announcement: e.target.value})}
-                placeholder="Enter announcement text here..."
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 min-h-[80px]"
-              />
+        {/* Announcement Bar Section */}
+        <div className="border-t border-gray-100">
+          <div 
+            className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => toggleSection('announcement')}
+          >
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 text-amber-500 mr-2" />
+              <h3 className="text-md font-semibold text-gray-900">Announcement Bar</h3>
             </div>
-            <div className="w-32">
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Speed (Sec)</label>
-              <input 
-                type="number" 
-                value={settingsForm.announcementSpeed} 
-                onChange={(e) => setSettingsForm({...settingsForm, announcementSpeed: Number(e.target.value)})}
-                min="5"
-                max="200"
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <p className="text-[10px] text-gray-400 mt-1">Higher = Slower</p>
+            <div className="flex items-center gap-4">
+              <label className="relative inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer"
+                  checked={settingsForm.showAnnouncement}
+                  onChange={(e) => setSettingsForm({...settingsForm, showAnnouncement: e.target.checked})}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+              {expandedSections.announcement ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
             </div>
           </div>
+
+          <AnimatePresence>
+            {expandedSections.announcement && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="px-6 pb-6"
+              >
+                <div className="flex gap-4">
+                  <div className="flex-grow">
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Announcement Text</label>
+                    <textarea 
+                      value={settingsForm.announcement} 
+                      onChange={(e) => setSettingsForm({...settingsForm, announcement: e.target.value})}
+                      placeholder="Enter announcement text here..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 min-h-[80px]"
+                    />
+                  </div>
+                  <div className="w-32">
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Speed (Sec)</label>
+                    <input 
+                      type="number" 
+                      min="5"
+                      max="200"
+                      value={settingsForm.announcementSpeed} 
+                      onChange={(e) => setSettingsForm({...settingsForm, announcementSpeed: Number(e.target.value)})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Higher = Slower</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <h3 className="text-md font-semibold text-gray-900 mb-4">Branding & Taglines</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Primary Tagline (Main Title)</label>
-              <input 
-                type="text" 
-                value={settingsForm.tagline1} 
-                onChange={(e) => setSettingsForm({...settingsForm, tagline1: e.target.value})}
-                placeholder="e.g., Together Dreams"
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-              />
+        {/* Branding & Taglines Section */}
+        <div className="border-t border-gray-100">
+          <div 
+            className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => toggleSection('branding')}
+          >
+            <div className="flex items-center">
+              <PiggyBank className="w-5 h-5 text-indigo-500 mr-2" />
+              <h3 className="text-md font-semibold text-gray-900">Branding & Taglines</h3>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Secondary Tagline (Subtitle)</label>
-              <input 
-                type="text" 
-                value={settingsForm.tagline2} 
-                onChange={(e) => setSettingsForm({...settingsForm, tagline2: e.target.value})}
-                placeholder="e.g., Collective savings, strong future"
-                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
+            {expandedSections.branding ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
           </div>
+
+          <AnimatePresence>
+            {expandedSections.branding && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="px-6 pb-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Primary Tagline (Main Title)</label>
+                    <input 
+                      type="text" 
+                      value={settingsForm.tagline1} 
+                      onChange={(e) => setSettingsForm({...settingsForm, tagline1: e.target.value})}
+                      placeholder="e.g., Together Dreams"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Secondary Tagline (Subtitle)</label>
+                    <input 
+                      type="text" 
+                      value={settingsForm.tagline2} 
+                      onChange={(e) => setSettingsForm({...settingsForm, tagline2: e.target.value})}
+                      placeholder="e.g., Collective savings, strong future"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <h3 className="text-md font-semibold text-gray-900 mb-4">Contact Persons (Public Page Bottom)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Contact Person 1 */}
-            <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-              <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-wider">Left Card (Person 1)</h4>
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Name</label>
-                  <input 
-                    type="text" 
-                    value={settingsForm.contactPerson1.name} 
-                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, name: e.target.value}})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Role</label>
-                  <input 
-                    type="text" 
-                    value={settingsForm.contactPerson1.role} 
-                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, role: e.target.value}})}
-                    placeholder="e.g., Manager"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Phone</label>
-                    <input 
-                      type="text" 
-                      value={settingsForm.contactPerson1.phone} 
-                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, phone: e.target.value}})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Email</label>
-                    <input 
-                      type="email" 
-                      value={settingsForm.contactPerson1.email} 
-                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, email: e.target.value}})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Image URL or Upload</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      value={settingsForm.contactPerson1.imageUrl} 
-                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, imageUrl: e.target.value}})}
-                      placeholder="https://..."
-                      className="flex-grow px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                    <label className="cursor-pointer bg-white border border-gray-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center">
-                      Upload
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, imageUrl: reader.result as string}});
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                  {settingsForm.contactPerson1.imageUrl && (
-                    <div className="mt-2 w-12 h-12 rounded-full overflow-hidden border border-gray-200">
-                      <img src={settingsForm.contactPerson1.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
-                </div>
-              </div>
+        {/* Contact Persons Section */}
+        <div className="border-t border-gray-100">
+          <div 
+            className="p-6 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => toggleSection('contact')}
+          >
+            <div className="flex items-center">
+              <Users className="w-5 h-5 text-indigo-500 mr-2" />
+              <h3 className="text-md font-semibold text-gray-900">Contact Persons (Public Page Bottom)</h3>
             </div>
-
-            {/* Contact Person 2 */}
-            <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-              <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-wider">Right Card (Person 2)</h4>
-              <div className="grid grid-cols-1 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Name</label>
-                  <input 
-                    type="text" 
-                    value={settingsForm.contactPerson2.name} 
-                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, name: e.target.value}})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Role</label>
-                  <input 
-                    type="text" 
-                    value={settingsForm.contactPerson2.role} 
-                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, role: e.target.value}})}
-                    placeholder="e.g., Assistant Manager"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Phone</label>
-                    <input 
-                      type="text" 
-                      value={settingsForm.contactPerson2.phone} 
-                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, phone: e.target.value}})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Email</label>
-                    <input 
-                      type="email" 
-                      value={settingsForm.contactPerson2.email} 
-                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, email: e.target.value}})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Image URL or Upload</label>
-                  <div className="flex gap-2">
-                    <input 
-                      type="text" 
-                      value={settingsForm.contactPerson2.imageUrl} 
-                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, imageUrl: e.target.value}})}
-                      placeholder="https://..."
-                      className="flex-grow px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                    <label className="cursor-pointer bg-white border border-gray-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center">
-                      Upload
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onloadend = () => {
-                              setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, imageUrl: reader.result as string}});
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </label>
-                  </div>
-                  {settingsForm.contactPerson2.imageUrl && (
-                    <div className="mt-2 w-12 h-12 rounded-full overflow-hidden border border-gray-200">
-                      <img src={settingsForm.contactPerson2.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div className="flex items-center gap-4">
+              <label className="relative inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer"
+                  checked={settingsForm.showContactPersons}
+                  onChange={(e) => setSettingsForm({...settingsForm, showContactPersons: e.target.checked})}
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              </label>
+              {expandedSections.contact ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
             </div>
           </div>
+
+          <AnimatePresence>
+            {expandedSections.contact && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="px-6 pb-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Contact Person 1 */}
+                  <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-wider">Left Card (Person 1)</h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Name</label>
+                        <input 
+                          type="text" 
+                          value={settingsForm.contactPerson1.name} 
+                          onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, name: e.target.value}})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Role</label>
+                        <input 
+                          type="text" 
+                          value={settingsForm.contactPerson1.role} 
+                          onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, role: e.target.value}})}
+                          placeholder="e.g., Manager"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Phone</label>
+                          <input 
+                            type="text" 
+                            value={settingsForm.contactPerson1.phone} 
+                            onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, phone: e.target.value}})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Email</label>
+                          <input 
+                            type="email" 
+                            value={settingsForm.contactPerson1.email} 
+                            onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, email: e.target.value}})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Image URL or Upload</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={settingsForm.contactPerson1.imageUrl} 
+                            onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, imageUrl: e.target.value}})}
+                            placeholder="https://..."
+                            className="flex-grow px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                          <label className="cursor-pointer bg-white border border-gray-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center">
+                            Upload
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, imageUrl: reader.result as string}});
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {settingsForm.contactPerson1.imageUrl && (
+                          <div className="mt-2 w-12 h-12 rounded-full overflow-hidden border border-gray-200">
+                            <img src={settingsForm.contactPerson1.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contact Person 2 */}
+                  <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-wider">Right Card (Person 2)</h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Name</label>
+                        <input 
+                          type="text" 
+                          value={settingsForm.contactPerson2.name} 
+                          onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, name: e.target.value}})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Role</label>
+                        <input 
+                          type="text" 
+                          value={settingsForm.contactPerson2.role} 
+                          onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, role: e.target.value}})}
+                          placeholder="e.g., Assistant Manager"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Phone</label>
+                          <input 
+                            type="text" 
+                            value={settingsForm.contactPerson2.phone} 
+                            onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, phone: e.target.value}})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Email</label>
+                          <input 
+                            type="email" 
+                            value={settingsForm.contactPerson2.email} 
+                            onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, email: e.target.value}})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Image URL or Upload</label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            value={settingsForm.contactPerson2.imageUrl} 
+                            onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, imageUrl: e.target.value}})}
+                            placeholder="https://..."
+                            className="flex-grow px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                          <label className="cursor-pointer bg-white border border-gray-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center">
+                            Upload
+                            <input 
+                              type="file" 
+                              className="hidden" 
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onloadend = () => {
+                                    setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, imageUrl: reader.result as string}});
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {settingsForm.contactPerson2.imageUrl && (
+                          <div className="mt-2 w-12 h-12 rounded-full overflow-hidden border border-gray-200">
+                            <img src={settingsForm.contactPerson2.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
-          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
+          <div className="px-6 pb-6 pt-2 flex justify-end">
             <button 
               onClick={handleUpdateSettings}
               className="inline-flex items-center justify-center px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"

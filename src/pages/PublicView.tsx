@@ -402,7 +402,7 @@ export const PublicView = () => {
       </AnimatePresence>
 
       {/* Contact Persons Section */}
-      {(settings.contactPerson1?.name || settings.contactPerson2?.name) && (
+      {settings.showContactPersons !== false && (settings.contactPerson1?.name || settings.contactPerson2?.name) && (
         <div className="mt-16 mb-12">
           <div className="text-center mb-10">
             <h2 className="text-2xl font-bold text-gray-900">Contact Persons</h2>

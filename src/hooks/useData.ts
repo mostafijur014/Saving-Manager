@@ -39,6 +39,7 @@ export interface Settings {
   announcementSpeed?: number;
   tagline1?: string;
   tagline2?: string;
+  showContactPersons?: boolean;
   contactPerson1?: ContactPerson;
   contactPerson2?: ContactPerson;
 }
