@@ -6,6 +6,7 @@ export interface Member {
   id: string;
   name: string;
   memberId: string;
+  phone?: string;
   monthlyContribution: number;
   totalDeposited: number;
   lastPaymentDate: string;
@@ -21,6 +22,14 @@ export interface Transaction {
   month: string;
 }
 
+export interface ContactPerson {
+  name: string;
+  role: string;
+  phone: string;
+  email: string;
+  imageUrl: string;
+}
+
 export interface Settings {
   interestRate: number;
   duration: number;
@@ -30,6 +39,8 @@ export interface Settings {
   announcementSpeed?: number;
   tagline1?: string;
   tagline2?: string;
+  contactPerson1?: ContactPerson;
+  contactPerson2?: ContactPerson;
 }
 
 export const useData = () => {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useData } from '../hooks/useData';
 import { useNavigate } from 'react-router-dom';
 import { ShieldAlert, User, Lock } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -10,6 +11,7 @@ export const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { settings } = useData();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,16 +32,16 @@ export const Login = () => {
         className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-gray-100"
       >
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4">
-            <img 
-              src="input_file_0.png" 
-              alt="Together Dreams Logo" 
-              className="w-full h-full object-contain rounded-2xl shadow-md ring-2 ring-indigo-50"
-              referrerPolicy="no-referrer"
-            />
+          <div className="mb-4">
+            <h1 className="text-4xl font-black text-indigo-600 tracking-tighter uppercase italic">
+              {settings.tagline1 || 'Together Dreams'}
+            </h1>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
+              {settings.tagline2 || 'Collective savings, strong future'}
+            </p>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Admin Access</h2>
-          <p className="mt-2 text-gray-600">Enter your secret credentials to login.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mt-6">Admin Access</h2>
+          <p className="mt-1 text-gray-500 text-sm">Enter your secret credentials to login.</p>
         </div>
 
         {error && (

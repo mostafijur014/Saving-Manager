@@ -7,6 +7,7 @@
       "properties": {
         "name": { "type": "string", "description": "Full name of the member" },
         "memberId": { "type": "string", "description": "Unique identifier for the member" },
+        "phone": { "type": "string", "description": "Phone number for direct calling" },
         "monthlyContribution": { "type": "number", "description": "Agreed monthly savings amount" },
         "totalDeposited": { "type": "number", "description": "Total amount deposited so far" },
         "lastPaymentDate": { "type": "string", "format": "date", "description": "Date of the last deposit" },

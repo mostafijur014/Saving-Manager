@@ -6,7 +6,7 @@ import { calculateInterest, formatCurrency } from '../utils/calculations';
 import { 
   Plus, Edit2, Trash2, Settings as SettingsIcon, 
   CheckCircle, XCircle, AlertCircle, Download, Save, X,
-  Calendar, Clock
+  Calendar, Clock, Phone
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -34,6 +34,7 @@ export const AdminDashboard = () => {
   const [memberForm, setMemberForm] = useState({
     name: '',
     memberId: '',
+    phone: '',
     monthlyContribution: '',
     status: 'Active' as 'Active' | 'Inactive'
   });
@@ -47,7 +48,9 @@ export const AdminDashboard = () => {
     showAnnouncement: false,
     announcementSpeed: 40,
     tagline1: '',
-    tagline2: ''
+    tagline2: '',
+    contactPerson1: { name: '', role: '', phone: '', email: '', imageUrl: '' },
+    contactPerson2: { name: '', role: '', phone: '', email: '', imageUrl: '' }
   });
 
   // Sync settings form when data loads
@@ -61,7 +64,9 @@ export const AdminDashboard = () => {
         showAnnouncement: settings.showAnnouncement || false,
         announcementSpeed: settings.announcementSpeed || 40,
         tagline1: settings.tagline1 || '',
-        tagline2: settings.tagline2 || ''
+        tagline2: settings.tagline2 || '',
+        contactPerson1: settings.contactPerson1 || { name: '', role: '', phone: '', email: '', imageUrl: '' },
+        contactPerson2: settings.contactPerson2 || { name: '', role: '', phone: '', email: '', imageUrl: '' }
       });
     }
   }, [settings]);
@@ -106,6 +111,7 @@ export const AdminDashboard = () => {
     const data = {
       name: memberForm.name,
       memberId: memberForm.memberId,
+      phone: memberForm.phone,
       monthlyContribution: Number(memberForm.monthlyContribution),
       status: memberForm.status,
       totalDeposited: editingMember ? editingMember.totalDeposited : 0,
@@ -126,7 +132,7 @@ export const AdminDashboard = () => {
       setStatusMessage({ type: 'success', text: `Member ${editingMember ? 'updated' : 'added'} successfully` });
       setIsMemberModalOpen(false);
       setEditingMember(null);
-      setMemberForm({ name: '', memberId: '', monthlyContribution: '', status: 'Active' });
+      setMemberForm({ name: '', memberId: '', phone: '', monthlyContribution: '', status: 'Active' });
     } catch (err) {
       console.error(err);
       setStatusMessage({ type: 'error', text: 'Error saving member: ' + (err instanceof Error ? err.message : 'Unknown error') });
@@ -201,6 +207,8 @@ export const AdminDashboard = () => {
         announcementSpeed: Number(settingsForm.announcementSpeed),
         tagline1: settingsForm.tagline1,
         tagline2: settingsForm.tagline2,
+        contactPerson1: settingsForm.contactPerson1,
+        contactPerson2: settingsForm.contactPerson2,
         updatedAt: new Date().toISOString()
       };
 
@@ -299,7 +307,7 @@ export const AdminDashboard = () => {
           </div>
           <div className="flex flex-wrap gap-3">
             <button 
-              onClick={() => { setEditingMember(null); setMemberForm({ name: '', memberId: '', monthlyContribution: '', status: 'Active' }); setIsMemberModalOpen(true); }}
+              onClick={() => { setEditingMember(null); setMemberForm({ name: '', memberId: '', phone: '', monthlyContribution: '', status: 'Active' }); setIsMemberModalOpen(true); }}
               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" /> Add Member
@@ -426,6 +434,182 @@ export const AdminDashboard = () => {
             </div>
           </div>
         </div>
+
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <h3 className="text-md font-semibold text-gray-900 mb-4">Contact Persons (Public Page Bottom)</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Contact Person 1 */}
+            <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-wider">Left Card (Person 1)</h4>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Name</label>
+                  <input 
+                    type="text" 
+                    value={settingsForm.contactPerson1.name} 
+                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, name: e.target.value}})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Role</label>
+                  <input 
+                    type="text" 
+                    value={settingsForm.contactPerson1.role} 
+                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, role: e.target.value}})}
+                    placeholder="e.g., Manager"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Phone</label>
+                    <input 
+                      type="text" 
+                      value={settingsForm.contactPerson1.phone} 
+                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, phone: e.target.value}})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Email</label>
+                    <input 
+                      type="email" 
+                      value={settingsForm.contactPerson1.email} 
+                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, email: e.target.value}})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Image URL or Upload</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={settingsForm.contactPerson1.imageUrl} 
+                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, imageUrl: e.target.value}})}
+                      placeholder="https://..."
+                      className="flex-grow px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <label className="cursor-pointer bg-white border border-gray-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center">
+                      Upload
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setSettingsForm({...settingsForm, contactPerson1: {...settingsForm.contactPerson1, imageUrl: reader.result as string}});
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {settingsForm.contactPerson1.imageUrl && (
+                    <div className="mt-2 w-12 h-12 rounded-full overflow-hidden border border-gray-200">
+                      <img src={settingsForm.contactPerson1.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Person 2 */}
+            <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+              <h4 className="text-sm font-bold text-indigo-600 uppercase tracking-wider">Right Card (Person 2)</h4>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Name</label>
+                  <input 
+                    type="text" 
+                    value={settingsForm.contactPerson2.name} 
+                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, name: e.target.value}})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Role</label>
+                  <input 
+                    type="text" 
+                    value={settingsForm.contactPerson2.role} 
+                    onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, role: e.target.value}})}
+                    placeholder="e.g., Assistant Manager"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Phone</label>
+                    <input 
+                      type="text" 
+                      value={settingsForm.contactPerson2.phone} 
+                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, phone: e.target.value}})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Email</label>
+                    <input 
+                      type="email" 
+                      value={settingsForm.contactPerson2.email} 
+                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, email: e.target.value}})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Image URL or Upload</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={settingsForm.contactPerson2.imageUrl} 
+                      onChange={(e) => setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, imageUrl: e.target.value}})}
+                      placeholder="https://..."
+                      className="flex-grow px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                    <label className="cursor-pointer bg-white border border-gray-300 px-3 py-2 rounded-lg text-xs font-bold hover:bg-gray-50 flex items-center">
+                      Upload
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setSettingsForm({...settingsForm, contactPerson2: {...settingsForm.contactPerson2, imageUrl: reader.result as string}});
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                  {settingsForm.contactPerson2.imageUrl && (
+                    <div className="mt-2 w-12 h-12 rounded-full overflow-hidden border border-gray-200">
+                      <img src={settingsForm.contactPerson2.imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
+            <button 
+              onClick={handleUpdateSettings}
+              className="inline-flex items-center justify-center px-8 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+            >
+              <Save className="w-5 h-5 mr-2" /> Save All Settings
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Stats and Chart */}
@@ -478,6 +662,7 @@ export const AdminDashboard = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monthly</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Months Paid</th>
@@ -498,6 +683,18 @@ export const AdminDashboard = () => {
                         <div className="text-xs text-gray-500">{member.memberId}</div>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {member.phone ? (
+                      <a 
+                        href={`tel:${member.phone}`}
+                        className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
+                      >
+                        <Phone className="w-3 h-3 mr-1" /> {member.phone}
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No phone</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatCurrency(member.monthlyContribution)}
@@ -532,7 +729,17 @@ export const AdminDashboard = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <button 
-                      onClick={() => { setEditingMember(member); setMemberForm({ name: member.name, memberId: member.memberId, monthlyContribution: String(member.monthlyContribution), status: member.status }); setIsMemberModalOpen(true); }}
+                      onClick={() => { 
+                        setEditingMember(member); 
+                        setMemberForm({ 
+                          name: member.name, 
+                          memberId: member.memberId, 
+                          phone: member.phone || '',
+                          monthlyContribution: String(member.monthlyContribution), 
+                          status: member.status 
+                        }); 
+                        setIsMemberModalOpen(true); 
+                      }}
                       className="text-indigo-600 hover:text-indigo-900 mr-4"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -583,6 +790,16 @@ export const AdminDashboard = () => {
                     type="text" 
                     value={memberForm.memberId} 
                     onChange={(e) => setMemberForm({...memberForm, memberId: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <input 
+                    type="tel" 
+                    value={memberForm.phone} 
+                    onChange={(e) => setMemberForm({...memberForm, phone: e.target.value})}
+                    placeholder="e.g., +8801700000000"
                     className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500" 
                   />
                 </div>

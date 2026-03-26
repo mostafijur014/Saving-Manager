@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../hooks/useData';
 import { calculateInterest, formatCurrency } from '../utils/calculations';
-import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter, AlertTriangle, Calendar, X, Clock } from 'lucide-react';
+import { Users, TrendingUp, PiggyBank, Wallet, Search, Filter, AlertTriangle, Calendar, X, Clock, Phone, Mail } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -253,7 +253,17 @@ export const PublicView = () => {
                   <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-bold text-gray-900">{member.name}</div>
-                      <div className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{member.memberId}</div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-gray-500 font-mono uppercase tracking-tighter">{member.memberId}</span>
+                        {member.phone && (
+                          <a 
+                            href={`tel:${member.phone}`}
+                            className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium flex items-center mt-0.5"
+                          >
+                            {member.phone}
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatCurrency(member.monthlyContribution)}
@@ -390,6 +400,79 @@ export const PublicView = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Contact Persons Section */}
+      {(settings.contactPerson1?.name || settings.contactPerson2?.name) && (
+        <div className="mt-16 mb-12">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900">Contact Persons</h2>
+            <p className="text-gray-500 mt-2 text-sm uppercase tracking-widest font-bold">Get in touch with our team</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Person 1 */}
+            {settings.contactPerson1?.name && (
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 flex items-center gap-6"
+              >
+                <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-md ring-4 ring-indigo-50 flex-shrink-0">
+                  <img 
+                    src={settings.contactPerson1.imageUrl || 'https://picsum.photos/seed/person1/200/200'} 
+                    alt={settings.contactPerson1.name} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 leading-tight">{settings.contactPerson1.name}</h3>
+                  <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-3">{settings.contactPerson1.role}</p>
+                  <div className="space-y-1">
+                    <a href={`tel:${settings.contactPerson1.phone}`} className="flex items-center text-sm text-gray-600 hover:text-indigo-600 transition-colors">
+                      <Phone className="w-3.5 h-3.5 mr-2" /> {settings.contactPerson1.phone}
+                    </a>
+                    <a href={`mailto:${settings.contactPerson1.email}`} className="flex items-center text-sm text-gray-600 hover:text-indigo-600 transition-colors">
+                      <Mail className="w-3.5 h-3.5 mr-2" /> {settings.contactPerson1.email}
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Person 2 */}
+            {settings.contactPerson2?.name && (
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100 flex items-center gap-6"
+              >
+                <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-md ring-4 ring-indigo-50 flex-shrink-0">
+                  <img 
+                    src={settings.contactPerson2.imageUrl || 'https://picsum.photos/seed/person2/200/200'} 
+                    alt={settings.contactPerson2.name} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 leading-tight">{settings.contactPerson2.name}</h3>
+                  <p className="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-3">{settings.contactPerson2.role}</p>
+                  <div className="space-y-1">
+                    <a href={`tel:${settings.contactPerson2.phone}`} className="flex items-center text-sm text-gray-600 hover:text-indigo-600 transition-colors">
+                      <Phone className="w-3.5 h-3.5 mr-2" /> {settings.contactPerson2.phone}
+                    </a>
+                    <a href={`mailto:${settings.contactPerson2.email}`} className="flex items-center text-sm text-gray-600 hover:text-indigo-600 transition-colors">
+                      <Mail className="w-3.5 h-3.5 mr-2" /> {settings.contactPerson2.email}
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
