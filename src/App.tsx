@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   );
   
   if (!user || !isAdmin) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/finance-based-saving-login" replace />;
   }
 
   return <>{children}</>;
@@ -32,9 +32,9 @@ export default function App() {
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<PublicView />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/finance-based-saving-login" element={<Login />} />
             <Route 
-              path="/admin" 
+              path="/finance-based-saving" 
               element={
                 <ProtectedRoute>
                   <AdminDashboard />

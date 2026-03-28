@@ -17,7 +17,7 @@ export const useAuth = () => {
 
   const login = async (username: string, password: string) => {
     // Secret credentials
-    if (username === 'admin' && password === 'savings2026') {
+    if (username === 'FinSaver_Pro' && password === 'wealth@X26') {
       localStorage.setItem('admin_authenticated', 'true');
       setIsAuthenticated(true);
       return true;
@@ -30,5 +30,5 @@ export const useAuth = () => {
     setIsAuthenticated(false);
   };
 
-  return { user: isAuthenticated ? { email: 'admin' } : null, loading, isAdmin: isAuthenticated, login, logout };
+  return { user: isAuthenticated ? { email: 'FinSaver_Pro' } : null, loading, isAdmin: isAuthenticated, login, logout };
 };
