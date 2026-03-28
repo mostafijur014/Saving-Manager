@@ -12,6 +12,7 @@ export interface Member {
   lastPaymentDate: string;
   status: 'Active' | 'Inactive';
   createdAt: string;
+  order: number;
 }
 
 export interface Transaction {
@@ -79,7 +80,7 @@ export const useData = () => {
       setLoading(false);
     };
 
-    const qMembers = query(collection(db, 'members'), orderBy('name'));
+    const qMembers = query(collection(db, 'members'), orderBy('order', 'asc'));
     const unsubMembers = onSnapshot(qMembers, (snapshot) => {
       setMembers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Member)));
       membersLoaded = true;

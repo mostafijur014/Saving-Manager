@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useData, Member } from '../hooks/useData';
+import { useData, Member, Transaction } from '../hooks/useData';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { calculateInterest, formatCurrency } from '../utils/calculations';
@@ -12,6 +12,141 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
+import { 
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+const SortableMemberRow: React.FC<{ 
+  member: Member, 
+  transactions: Transaction[], 
+  expectedMonths: number,
+  onEdit: (m: Member) => void,
+  onDelete: (id: string) => void
+}> = ({ member, transactions, expectedMonths, onEdit, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: member.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1 : 0,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <tr 
+      ref={setNodeRef} 
+      style={style} 
+      className={`hover:bg-gray-50 transition-colors ${isDragging ? 'bg-indigo-50 shadow-inner' : ''}`}
+    >
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div 
+            {...attributes} 
+            {...listeners} 
+            className="mr-3 cursor-grab active:cursor-grabbing text-gray-400 hover:text-indigo-600"
+          >
+            <div className="grid grid-cols-2 gap-0.5 w-3">
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs mr-3">
+            {member.name.charAt(0)}
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-900">{member.name}</div>
+            <div className="text-xs text-gray-500">{member.memberId}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {member.phone ? (
+          <a 
+            href={`tel:${member.phone}`}
+            className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
+          >
+            <Phone className="w-3 h-3 mr-1" /> {member.phone}
+          </a>
+        ) : (
+          <span className="text-xs text-gray-400 italic">No phone</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {formatCurrency(member.monthlyContribution)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+        {formatCurrency(member.totalDeposited)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex flex-wrap gap-1 max-w-[150px]">
+          {transactions.filter(t => t.memberId === member.id).map(t => (
+            <span key={t.id} className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded border border-indigo-100">
+              {t.month.split('-')[1]}/{t.month.split('-')[0].slice(2)}
+            </span>
+          ))}
+          {transactions.filter(t => t.memberId === member.id).length === 0 && (
+            <span className="text-xs text-gray-400 italic">No payments</span>
+          )}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {(() => {
+          const paidCount = transactions.filter(t => t.memberId === member.id).length;
+          const isBehind = paidCount < expectedMonths;
+          return (
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+              !isBehind ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {isBehind ? `${expectedMonths - paidCount} Months Due` : 'Up to Date'}
+            </span>
+          );
+        })()}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div className="flex justify-end gap-2">
+          <button 
+            onClick={() => onEdit(member)}
+            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+          >
+            <Edit2 className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => onDelete(member.id)}
+            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
 export const AdminDashboard = () => {
   const { members, transactions, settings, loading, error } = useData();
 
@@ -21,10 +156,45 @@ export const AdminDashboard = () => {
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [selectedMemberId, setSelectedMemberId] = useState('');
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [depositView, setDepositView] = useState<'pending' | 'completed'>('pending');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositMonth, setDepositMonth] = useState(new Date().toISOString().slice(0, 7));
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = members.findIndex((m) => m.id === active.id);
+      const newIndex = members.findIndex((m) => m.id === over.id);
+
+      const newMembers = arrayMove(members, oldIndex, newIndex);
+      
+      // Update local state immediately for smooth UI
+      // Note: useData hook will eventually sync with Firestore, but this provides instant feedback
+      
+      try {
+        // Update Firestore in bulk
+        const updates = newMembers.map((member: Member, index) => {
+          return updateDoc(doc(db, 'members', member.id), {
+            order: index
+          });
+        });
+        await Promise.all(updates);
+      } catch (err) {
+        console.error('Error updating member order:', err);
+        setStatusMessage({ type: 'error', text: 'Failed to save new order' });
+      }
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -170,8 +340,11 @@ export const AdminDashboard = () => {
       if (editingMember) {
         await updateDoc(doc(db, 'members', editingMember.id), data);
       } else {
+        // Get the current max order to place the new member at the end
+        const maxOrder = members.length > 0 ? Math.max(...members.map(m => m.order || 0)) : -1;
         await addDoc(collection(db, 'members'), {
           ...data,
+          order: maxOrder + 1,
           createdAt: serverTimestamp()
         });
       }
@@ -202,12 +375,10 @@ export const AdminDashboard = () => {
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const member = members.find(m => m.id === selectedMemberId);
-    if (!member) return;
-
-    const amount = Number(depositAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setStatusMessage({ type: 'error', text: 'Please enter a valid amount' });
+    
+    const targetIds = selectedMemberIds;
+    if (targetIds.length === 0) {
+      setStatusMessage({ type: 'error', text: 'Please select at least one member' });
       return;
     }
 
@@ -215,28 +386,87 @@ export const AdminDashboard = () => {
     const month = depositMonth;
 
     try {
-      const currentTotal = Number(member.totalDeposited) || 0;
-      const newTotal = currentTotal + amount;
+      for (const memberId of targetIds) {
+        const member = members.find(m => m.id === memberId);
+        if (!member) continue;
 
-      // 1. Add Transaction
-      await addDoc(collection(db, 'transactions'), {
-        memberId: selectedMemberId,
-        amount,
-        date: now.toISOString(),
-        month,
-        createdAt: serverTimestamp()
-      });
+        const monthTransactions = transactions.filter(t => t.memberId === memberId && t.month === month);
+        const alreadyPaid = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
 
-      // 2. Update Member
-      await updateDoc(doc(db, 'members', selectedMemberId), {
-        totalDeposited: newTotal,
-        lastPaymentDate: now.toISOString()
-      });
+        if (depositView === 'pending') {
+          let amountToDeposit: number;
+          if (targetIds.length > 1) {
+            amountToDeposit = Number(member.monthlyContribution) - alreadyPaid;
+          } else {
+            amountToDeposit = Number(depositAmount);
+            if (isNaN(amountToDeposit) || amountToDeposit <= 0) {
+              setStatusMessage({ type: 'error', text: 'Please enter a valid amount' });
+              return;
+            }
+            if (alreadyPaid + amountToDeposit > member.monthlyContribution) {
+              setStatusMessage({ type: 'error', text: `Total deposit for ${member.name} cannot exceed ${member.monthlyContribution}` });
+              return;
+            }
+          }
 
-      setStatusMessage({ type: 'success', text: 'Deposit confirmed successfully' });
+          if (amountToDeposit > 0) {
+            // 1. Add Transaction
+            await addDoc(collection(db, 'transactions'), {
+              memberId: memberId,
+              amount: amountToDeposit,
+              date: now.toISOString(),
+              month,
+              createdAt: serverTimestamp()
+            });
+
+            // 2. Update Member
+            await updateDoc(doc(db, 'members', memberId), {
+              totalDeposited: (Number(member.totalDeposited) || 0) + amountToDeposit,
+              lastPaymentDate: now.toISOString()
+            });
+          }
+        } else {
+          // Completed View (Update case)
+          const newTotal = Number(depositAmount);
+          if (isNaN(newTotal) || newTotal < 0) {
+            setStatusMessage({ type: 'error', text: 'Please enter a valid amount' });
+            return;
+          }
+          if (newTotal > member.monthlyContribution) {
+            setStatusMessage({ type: 'error', text: `Total deposit for ${member.name} cannot exceed ${member.monthlyContribution}` });
+            return;
+          }
+
+          const diff = newTotal - alreadyPaid;
+          if (diff === 0) continue;
+
+          // Consolidate transactions for this month into one
+          for (const t of monthTransactions) {
+            await deleteDoc(doc(db, 'transactions', t.id));
+          }
+
+          if (newTotal > 0) {
+            await addDoc(collection(db, 'transactions'), {
+              memberId: memberId,
+              amount: newTotal,
+              date: now.toISOString(),
+              month,
+              createdAt: serverTimestamp()
+            });
+          }
+
+          // Update Member
+          await updateDoc(doc(db, 'members', memberId), {
+            totalDeposited: (Number(member.totalDeposited) || 0) + diff,
+            lastPaymentDate: now.toISOString()
+          });
+        }
+      }
+
+      setStatusMessage({ type: 'success', text: depositView === 'pending' ? `${targetIds.length} deposit(s) confirmed successfully` : 'Deposit updated successfully' });
       setIsDepositModalOpen(false);
       setDepositAmount('');
-      setSelectedMemberId('');
+      setSelectedMemberIds([]);
     } catch (err) {
       console.error(err);
       setStatusMessage({ type: 'error', text: err instanceof Error ? err.message : 'Error processing deposit' });
@@ -353,12 +583,30 @@ export const AdminDashboard = () => {
             >
               <Plus className="w-4 h-4 mr-2" /> Add Member
             </button>
-            <button 
-              onClick={() => setIsDepositModalOpen(true)}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all shadow-sm"
-            >
-              <span className="w-4 h-4 mr-2 flex items-center justify-center font-bold">৳</span> New Deposit
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => { 
+                  setDepositView('pending'); 
+                  setSelectedMemberIds([]);
+                  setDepositAmount('');
+                  setIsDepositModalOpen(true); 
+                }}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all shadow-sm"
+              >
+                <span className="w-4 h-4 mr-2 flex items-center justify-center font-bold">৳</span> New Deposit
+              </button>
+              <button 
+                onClick={() => { 
+                  setDepositView('completed'); 
+                  setSelectedMemberIds([]);
+                  setDepositAmount('');
+                  setIsDepositModalOpen(true); 
+                }}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-sm"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" /> Done Deposit
+              </button>
+            </div>
             <button 
               onClick={exportToCSV}
               className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
@@ -900,103 +1148,55 @@ export const AdminDashboard = () => {
           <h3 className="text-lg font-semibold text-gray-900">Member Management</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monthly</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Months Paid</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {members.map((member) => (
-                <tr key={member.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs mr-3">
-                        {member.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                        <div className="text-xs text-gray-500">{member.memberId}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {member.phone ? (
-                      <a 
-                        href={`tel:${member.phone}`}
-                        className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
-                      >
-                        <Phone className="w-3 h-3 mr-1" /> {member.phone}
-                      </a>
-                    ) : (
-                      <span className="text-xs text-gray-400 italic">No phone</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatCurrency(member.monthlyContribution)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                    {formatCurrency(member.totalDeposited)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-wrap gap-1 max-w-[150px]">
-                      {transactions.filter(t => t.memberId === member.id).map(t => (
-                        <span key={t.id} className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded border border-indigo-100">
-                          {t.month.split('-')[1]}/{t.month.split('-')[0].slice(2)}
-                        </span>
-                      ))}
-                      {transactions.filter(t => t.memberId === member.id).length === 0 && (
-                        <span className="text-xs text-gray-400 italic">No payments</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {(() => {
-                      const paidCount = transactions.filter(t => t.memberId === member.id).length;
-                      const isBehind = paidCount < expectedMonths;
-                      return (
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          !isBehind ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                        }`}>
-                          {isBehind ? `${expectedMonths - paidCount} Months Due` : 'Up to Date'}
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      onClick={() => { 
-                        setEditingMember(member); 
-                        setMemberForm({ 
-                          name: member.name, 
-                          memberId: member.memberId, 
-                          phone: member.phone || '',
-                          monthlyContribution: String(member.monthlyContribution), 
-                          status: member.status 
-                        }); 
-                        setIsMemberModalOpen(true); 
-                      }}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => { setMemberToDelete(member.id); setIsConfirmDeleteOpen(true); }}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Monthly</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Months Paid</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                <SortableContext 
+                  items={members.map(m => m.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {members.map((member) => (
+                    <SortableMemberRow 
+                      key={member.id} 
+                      member={member} 
+                      transactions={transactions}
+                      expectedMonths={expectedMonths}
+                      onEdit={(m) => {
+                        setEditingMember(m);
+                        setMemberForm({
+                          name: m.name,
+                          memberId: m.memberId,
+                          phone: m.phone || '',
+                          monthlyContribution: String(m.monthlyContribution),
+                          status: m.status
+                        });
+                        setIsMemberModalOpen(true);
+                      }}
+                      onDelete={(id) => {
+                        setMemberToDelete(id);
+                        setIsConfirmDeleteOpen(true);
+                      }}
+                    />
+                  ))}
+                </SortableContext>
+              </tbody>
+            </table>
+          </DndContext>
         </div>
       </div>
 
@@ -1084,56 +1284,196 @@ export const AdminDashboard = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
             >
               <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-gray-900">Log New Deposit</h3>
-                <button onClick={() => setIsDepositModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6" /></button>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {depositView === 'pending' ? 'Log New Deposits' : 'View Completed Deposits'}
+                </h3>
+                <button onClick={() => { setIsDepositModalOpen(false); setSelectedMemberIds([]); }} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6" /></button>
               </div>
               <form onSubmit={handleDeposit} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Member</label>
-                  <select 
-                    required 
-                    value={selectedMemberId} 
-                    onChange={(e) => setSelectedMemberId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="">Choose a member...</option>
-                    {members.filter(m => m.status === 'Active').map(m => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.memberId})</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Deposit Amount</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="h-4 w-4 text-gray-400 font-bold flex items-center justify-center">৳</span>
-                    </div>
+                <div className="flex gap-4">
+                  <div className="flex-grow">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
                     <input 
-                      required 
-                      type="number" 
-                      value={depositAmount} 
-                      onChange={(e) => setDepositAmount(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500" 
-                      placeholder="0.00"
+                      type="month" 
+                      value={depositMonth} 
+                      onChange={(e) => {
+                        setDepositMonth(e.target.value);
+                        setSelectedMemberIds([]);
+                        setDepositAmount('');
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
+                  <div className="w-1/2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {depositView === 'pending' 
+                        ? (selectedMemberIds.length > 1 ? 'Bulk Deposit Info' : 'Deposit Amount (৳)') 
+                        : 'Updated Total Amount (৳)'}
+                    </label>
+                    {depositView === 'pending' && selectedMemberIds.length > 1 ? (
+                      <div className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-medium border border-indigo-100 h-[42px] flex items-center">
+                        Remaining monthly contribution applied to each
+                      </div>
+                    ) : (
+                      <input 
+                        required 
+                        type="number" 
+                        value={depositAmount} 
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        max={(() => {
+                          if (selectedMemberIds.length === 1) {
+                            const member = members.find(m => m.id === selectedMemberIds[0]);
+                            if (member) {
+                              if (depositView === 'pending') {
+                                const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === depositMonth);
+                                const alreadyPaid = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                                return member.monthlyContribution - alreadyPaid;
+                              } else {
+                                return member.monthlyContribution;
+                              }
+                            }
+                          }
+                          return undefined;
+                        })()}
+                        min="0"
+                        placeholder="e.g., 1000"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500" 
+                      />
+                    )}
+                  </div>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
-                  <input 
-                    required 
-                    type="month" 
-                    value={depositMonth} 
-                    onChange={(e) => setDepositMonth(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500" 
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      {depositView === 'pending' ? 'Select Members (Pending)' : 'Members (Completed)'}
+                    </label>
+                    {depositView === 'pending' && (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const pendingMembers = members.filter(m => {
+                            const monthTransactions = transactions.filter(t => t.memberId === m.id && t.month === depositMonth);
+                            const paidThisMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                            return paidThisMonth < m.monthlyContribution && m.status === 'Active';
+                          });
+                          if (selectedMemberIds.length === pendingMembers.length) {
+                            setSelectedMemberIds([]);
+                          } else {
+                            setSelectedMemberIds(pendingMembers.map(m => m.id));
+                          }
+                        }}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                      >
+                        {(() => {
+                          const pendingMembers = members.filter(m => {
+                            const monthTransactions = transactions.filter(t => t.memberId === m.id && t.month === depositMonth);
+                            const paidThisMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                            return paidThisMonth < m.monthlyContribution && m.status === 'Active';
+                          });
+                          return selectedMemberIds.length === pendingMembers.length ? 'Deselect All' : 'Select All';
+                        })()}
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="border border-gray-200 rounded-xl max-h-[250px] overflow-y-auto p-2 space-y-1">
+                    {(() => {
+                      const filteredMembers = members.filter(m => {
+                        const monthTransactions = transactions.filter(t => t.memberId === m.id && t.month === depositMonth);
+                        const paidThisMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                        return depositView === 'pending' ? paidThisMonth < m.monthlyContribution : paidThisMonth >= m.monthlyContribution;
+                      });
+
+                      if (filteredMembers.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-gray-400 text-sm italic">
+                            {depositView === 'pending' ? 'All members have paid for this month!' : 'No deposits logged for this month yet.'}
+                          </div>
+                        );
+                      }
+
+                      return filteredMembers.map(member => {
+                        const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === depositMonth);
+                        const paidThisMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+                        
+                        return (
+                          <label 
+                            key={member.id} 
+                            className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${
+                              selectedMemberIds.includes(member.id) ? 'bg-indigo-50 border-indigo-100' : 'hover:bg-gray-50 border-transparent'
+                            } border`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input 
+                                type={depositView === 'pending' ? "checkbox" : "radio"}
+                                name="member-selection"
+                                checked={selectedMemberIds.includes(member.id)}
+                                onChange={(e) => {
+                                  let newSelected;
+                                  if (depositView === 'pending') {
+                                    if (e.target.checked) {
+                                      newSelected = [...selectedMemberIds, member.id];
+                                    } else {
+                                      newSelected = selectedMemberIds.filter(id => id !== member.id);
+                                    }
+                                  } else {
+                                    newSelected = [member.id];
+                                  }
+                                  setSelectedMemberIds(newSelected);
+                                  
+                                  // If only one member is selected, default the amount
+                                  if (newSelected.length === 1) {
+                                    const selectedMember = members.find(m => m.id === newSelected[0]);
+                                    if (selectedMember) {
+                                      if (depositView === 'pending') {
+                                        const mTransactions = transactions.filter(t => t.memberId === selectedMember.id && t.month === depositMonth);
+                                        const alreadyPaid = mTransactions.reduce((sum, t) => sum + t.amount, 0);
+                                        setDepositAmount(String(selectedMember.monthlyContribution - alreadyPaid));
+                                      } else {
+                                        const mTransactions = transactions.filter(t => t.memberId === selectedMember.id && t.month === depositMonth);
+                                        const alreadyPaid = mTransactions.reduce((sum, t) => sum + t.amount, 0);
+                                        setDepositAmount(String(alreadyPaid));
+                                      }
+                                    }
+                                  }
+                                }}
+                                className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                              />
+                              <div>
+                                <p className="text-sm font-bold text-gray-900 leading-none">{member.name}</p>
+                                <p className="text-[10px] text-gray-400 font-mono mt-1">{member.memberId}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs font-bold text-gray-900 leading-none">
+                                {formatCurrency(paidThisMonth)} / {formatCurrency(member.monthlyContribution)}
+                              </p>
+                              <p className="text-[10px] text-gray-400 mt-1">
+                                {depositView === 'pending' ? 'Paid so far' : 'Total Paid'}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      });
+                    })()}
+                  </div>
                 </div>
+
                 <div className="pt-4 flex gap-3">
-                  <button type="button" onClick={() => setIsDepositModalOpen(false)} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50">Cancel</button>
-                  <button type="submit" className="flex-1 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 font-semibold">Confirm Deposit</button>
+                  <button type="button" onClick={() => { setIsDepositModalOpen(false); setSelectedMemberIds([]); }} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50">Cancel</button>
+                  {depositView === 'pending' && (
+                    <button 
+                      type="submit" 
+                      disabled={selectedMemberIds.length === 0}
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Confirm {selectedMemberIds.length} Deposit(s)
+                    </button>
+                  )}
                 </div>
               </form>
             </motion.div>
