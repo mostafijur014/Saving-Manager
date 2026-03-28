@@ -118,6 +118,27 @@ export const PublicView = () => {
     { label: 'Final Balance', value: formatCurrency(totalFinal), icon: Wallet, color: 'bg-indigo-600' },
   ];
 
+  // Logic for the 3 columns
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  
+  // Column 1: All members and their deposit this month
+  const column1Data = members.map(member => {
+    const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === currentMonth);
+    const paidThisMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+    return { ...member, paidThisMonth };
+  });
+
+  // Column 2: Who completed their deposit this month
+  const column2Data = column1Data.filter(m => m.paidThisMonth >= m.monthlyContribution);
+
+  // Column 3: Due person information (total dues across all months)
+  const column3Data = members.map(member => {
+    const monthsSinceStart = allMonths.length;
+    const expectedTotal = monthsSinceStart * member.monthlyContribution;
+    const totalDue = Math.max(0, expectedTotal - member.totalDeposited);
+    return { ...member, totalDue };
+  }).filter(m => m.totalDue > 0);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -191,6 +212,108 @@ export const PublicView = () => {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* 3-Column Status Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {/* Column 1: Monthly Deposits */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]">
+          <div className="bg-indigo-600 px-4 py-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Monthly Deposits</h3>
+            <span className="text-[10px] bg-indigo-500 text-white px-2 py-0.5 rounded-full font-bold">
+              {new Date().toLocaleDateString('en-US', { month: 'short' })}
+            </span>
+          </div>
+          <div className="p-4 overflow-y-auto flex-grow space-y-3">
+            {column1Data.map(member => (
+              <div key={member.id} className="flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${member.paidThisMonth >= member.monthlyContribution ? 'bg-green-500' : member.paidThisMonth > 0 ? 'bg-yellow-500' : 'bg-red-500'}`} />
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 leading-none">{member.name}</p>
+                    <p className="text-[10px] text-gray-400 font-mono mt-1">{member.memberId}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-black text-gray-900">{formatCurrency(member.paidThisMonth)}</p>
+                  <p className="text-[9px] text-gray-400 uppercase font-bold">Target: {formatCurrency(member.monthlyContribution)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Column 2: Completed This Month */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]">
+          <div className="bg-green-600 px-4 py-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Completed</h3>
+            <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">
+              {column2Data.length} Members
+            </span>
+          </div>
+          <div className="p-4 overflow-y-auto flex-grow space-y-3">
+            {column2Data.length > 0 ? (
+              column2Data.map(member => (
+                <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-green-50 border border-green-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center">
+                      <PiggyBank className="w-3.5 h-3.5 text-green-700" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-green-900 leading-none">{member.name}</p>
+                      <p className="text-[10px] text-green-600 font-mono mt-1">{member.memberId}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-green-700">{formatCurrency(member.paidThisMonth)}</p>
+                    <p className="text-[9px] text-green-600 uppercase font-bold">Success</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                <Clock className="w-10 h-10 text-gray-200 mb-2" />
+                <p className="text-sm text-gray-400 font-medium">No completions yet this month</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Column 3: Outstanding Dues */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]">
+          <div className="bg-red-600 px-4 py-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Outstanding Dues</h3>
+            <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-bold">
+              {column3Data.length} Pending
+            </span>
+          </div>
+          <div className="p-4 overflow-y-auto flex-grow space-y-3">
+            {column3Data.length > 0 ? (
+              column3Data.map(member => (
+                <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-red-50 border border-red-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-red-200 flex items-center justify-center">
+                      <AlertTriangle className="w-3.5 h-3.5 text-red-700" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-red-900 leading-none">{member.name}</p>
+                      <p className="text-[10px] text-red-600 font-mono mt-1">{member.memberId}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-black text-red-700">{formatCurrency(member.totalDue)}</p>
+                    <p className="text-[9px] text-red-600 uppercase font-bold">Total Due</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                <Users className="w-10 h-10 text-green-100 mb-2" />
+                <p className="text-sm text-green-600 font-medium">All members are up to date!</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
