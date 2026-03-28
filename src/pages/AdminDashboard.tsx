@@ -86,13 +86,26 @@ export const AdminDashboard = () => {
   }, [settings]);
 
   const getMonthsSinceStart = () => {
-    if (!settings.startDate) return 0;
+    if (!settings.startDate) return [];
+    
     const start = new Date(settings.startDate + '-01');
-    const now = new Date();
-    return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()) + 1;
+    const end = new Date();
+    const months = [];
+    let current = new Date(start);
+
+    // Safety check to prevent infinite loop if dates are invalid
+    let safetyCounter = 0;
+    while (current <= end && safetyCounter < 120) { // Max 10 years
+      months.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`);
+      current.setMonth(current.getMonth() + 1);
+      safetyCounter++;
+    }
+    
+    return months;
   };
 
-  const expectedMonths = getMonthsSinceStart();
+  const chartMonths = getMonthsSinceStart();
+  const expectedMonths = chartMonths.length;
 
   // Auto-clear status message
   useEffect(() => {
@@ -268,15 +281,8 @@ export const AdminDashboard = () => {
     link.click();
   };
 
-  // Chart Data: Last 6 months collection
-  const last6Months = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  }).reverse();
-
-  const chartData = last6Months.map(month => ({
-    month,
+  const chartData = chartMonths.map(month => ({
+    month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
     amount: transactions
       .filter(t => t.month === month && members.some(m => m.id === t.memberId))
       .reduce((sum, t) => sum + t.amount, 0)
@@ -730,17 +736,17 @@ export const AdminDashboard = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold mb-6">Monthly Collection Growth</h3>
-          <div className="h-64">
+          <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#9ca3af'}} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
                 <Tooltip 
                   cursor={{fill: '#f9fafb'}}
                   contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
                 />
-                <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
+                <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={32}>
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#4f46e5' : '#c7d2fe'} />
                   ))}
