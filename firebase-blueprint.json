@@ -57,12 +57,26 @@
         "order": { "type": "number", "description": "Display order" }
       },
       "required": ["name", "position", "phone"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "An expenditure record",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Short title of the expense" },
+        "detail": { "type": "string", "description": "Detailed description of what the money was spent on" },
+        "amount": { "type": "number", "description": "Amount spent" },
+        "date": { "type": "string", "format": "date", "description": "Date of the expenditure" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "amount", "date"]
     }
   },
   "firestore": {
     "/members": { "schema": "Member", "description": "Collection of group members" },
     "/transactions": { "schema": "Transaction", "description": "History of all deposits" },
     "/settings": { "schema": "Settings", "description": "Global configuration" },
-    "/emergencyContacts": { "schema": "EmergencyContact", "description": "Emergency contact persons" }
+    "/emergencyContacts": { "schema": "EmergencyContact", "description": "Emergency contact persons" },
+    "/expenses": { "schema": "Expense", "description": "Collection of group expenditures" }
   }
 }

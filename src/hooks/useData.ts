@@ -39,8 +39,17 @@ export interface EmergencyContact {
   order: number;
 }
 
+export interface Expense {
+  id: string;
+  title: string;
+  detail?: string;
+  amount: number;
+  date: string;
+  createdAt?: any;
+}
+
 export interface Settings {
-  interestRate: number;
+  interestAmount: number;
   duration: number;
   startDate: string;
   announcement?: string;
@@ -60,12 +69,13 @@ export const useData = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settings, setSettings] = useState<Settings>({ 
-    interestRate: 5, 
+    interestAmount: 500, 
     duration: 12,
     startDate: new Date().toISOString().slice(0, 7), // Default to current month
     announcementSpeed: 40, // Default speed
-    tagline1: 'Together Dreams',
+    tagline1: 'Dream Development Society',
     tagline2: 'Collective savings, strong future',
     dueStartDate: 15,
     dueWarningDate: 17,
@@ -79,9 +89,10 @@ export const useData = () => {
     let transactionsLoaded = false;
     let settingsLoaded = false;
     let emergencyContactsLoaded = false;
+    let expensesLoaded = false;
 
     const checkLoading = () => {
-      if (membersLoaded && transactionsLoaded && settingsLoaded && emergencyContactsLoaded) {
+      if (membersLoaded && transactionsLoaded && settingsLoaded && emergencyContactsLoaded && expensesLoaded) {
         setLoading(false);
       }
     };
@@ -125,13 +136,21 @@ export const useData = () => {
       checkLoading();
     }, handleError);
 
+    const qExpenses = query(collection(db, 'expenses'), orderBy('date', 'desc'));
+    const unsubExpenses = onSnapshot(qExpenses, (snapshot) => {
+      setExpenses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense)));
+      expensesLoaded = true;
+      checkLoading();
+    }, handleError);
+
     return () => {
       unsubMembers();
       unsubTransactions();
       unsubSettings();
       unsubEmergency();
+      unsubExpenses();
     };
   }, []);
 
-  return { members, transactions, settings, emergencyContacts, loading, error };
+  return { members, transactions, settings, emergencyContacts, expenses, loading, error };
 };

@@ -11,27 +11,25 @@
       padding: 0 !important;
     }
     
-    /* Hide the entire app UI safely */
-    /* This ensures parents remain 'visible' in terms of layout but their contents stay hidden */
-    #root {
-      display: block !important;
+    /* Hide main UI components that take up space */
+    nav, footer, .no-print, .no-print-area, header, aside, .sidebar-container {
+      display: none !important;
+      height: 0 !important;
+      overflow: hidden !important;
     }
 
-    /* Hide specific non-print sections */
-    .no-print, .no-print-area, footer, nav, header, aside {
+    /* Hide all children of body except the one containing our root */
+    body > *:not(#root):not(.print-only) {
       display: none !important;
     }
 
-    /* Target all descendants except the printable area */
-    /* We use visibility instead of display:none on body to keep the print-only container active */
-    body * {
-      visibility: hidden;
+    /* Target high-level containers inside root to hide UI WITHOUT hiding parents of print-only */
+    #root > div > *:not(main) {
+      display: none !important;
     }
 
-    /* Restore and position the printable area */
-    .print-only, .print-only * {
-      visibility: visible !important;
-    }
+    /* Inside the main element, hide everything except the AdminDashboard's content wrapper */
+    /* Or more simply, let's use the no-print class we already have */
 
     .print-only {
       display: block !important;
@@ -40,6 +38,14 @@
       left: 0 !important;
       width: 100% !important;
       background: white !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      visibility: visible !important;
+      z-index: 9999 !important;
+    }
+
+    .print-only * {
+      visibility: visible !important;
     }
 
     /* Print alignment for A4 (3 columns, 4 rows) */
@@ -53,8 +59,8 @@
     .print-grid {
       display: grid !important;
       grid-template-columns: repeat(3, 1fr) !important;
-      /* 4 rows per page ≈ 277mm usable height / 4 = ~69mm including gaps */
-      grid-auto-rows: 64mm !important; 
+      /* Define 4 rows precisely. 273mm (A4 usable) / 4 = 68.25mm */
+      grid-auto-rows: 66mm !important; 
       gap: 3mm !important;
       width: 100% !important;
       padding: 0 !important;
@@ -62,20 +68,21 @@
 
     .print-card-wrapper {
       width: 100% !important;
-      height: 64mm !important; /* Fixed height for 4 rows per page */
+      height: 66mm !important; /* Uniform height for all receipts */
       break-inside: avoid !important;
       display: flex !important;
       align-items: stretch !important;
+      justify-content: center !important;
     }
 
-    /* Force page break after every 12th receipt for strict 3x4 layout */
-    .print-card-wrapper:nth-child(12n) {
+    /* Force page break after every 12th receipt for strict 3x4 layout, but avoid it for the last one to prevent trailing blank page */
+    .print-card-wrapper:nth-child(12n):not(:last-child) {
       break-after: page !important;
     }
 
     @page {
       size: A4;
-      margin: 12mm 10mm; /* Consistent margins for ALL pages */
+      margin: 6mm 10mm; /* Consistent margins for ALL pages */
     }
 
     .print-break-inside-avoid {

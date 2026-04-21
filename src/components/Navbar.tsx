@@ -35,7 +35,7 @@ export const Navbar = () => {
               <Link to="/" className="flex items-center space-x-2 sm:space-x-4 group">
                 <div className="flex flex-col overflow-hidden">
                   <span className="text-sm sm:text-xl font-black text-gray-900 leading-none tracking-tighter uppercase truncate">
-                    {settings.tagline1 || 'Together Dreams'}
+                    {settings.tagline1 || 'Dream Development Society'}
                   </span>
                   <span className="text-[8px] sm:text-[11px] font-bold text-indigo-600 uppercase tracking-widest mt-0.5 sm:mt-1 truncate">
                     {settings.tagline2 || 'Collective savings, strong future'}

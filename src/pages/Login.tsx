@@ -34,7 +34,7 @@ export const Login = () => {
         <div className="text-center mb-8">
           <div className="mb-4">
             <h1 className="text-4xl font-black text-indigo-600 tracking-tighter uppercase italic">
-              {settings.tagline1 || 'Together Dreams'}
+              {settings.tagline1 || 'Dream Development Society'}
             </h1>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
               {settings.tagline2 || 'Collective savings, strong future'}

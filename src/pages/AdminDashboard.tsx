@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useData, Member, Transaction } from '../hooks/useData';
+import { useData, Member, Transaction, Expense } from '../hooks/useData';
 import { db } from '../firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { calculateInterest, formatCurrency } from '../utils/calculations';
@@ -156,31 +156,33 @@ interface ReceiptCardProps {
 const ReceiptCard = ({ data, settings, isPrint = false }: ReceiptCardProps) => {
   return (
     <div 
-      className={`bg-white shadow-md border border-gray-100 relative overflow-hidden flex flex-col ${isPrint ? 'p-2.5 m-0 rounded-lg h-full' : 'p-6 rounded-3xl min-h-[250px]'}`} 
+      className={`bg-white shadow-md border border-gray-100 relative overflow-hidden flex flex-col items-center text-center ${isPrint ? 'p-2.5 m-0 rounded-lg h-full justify-center' : 'p-6 rounded-3xl min-h-[250px]'}`} 
       style={isPrint ? { boxShadow: 'none', border: '1px solid #e1e4e8', backgroundColor: '#ffffff' } : {}}
     >
       {/* Header */}
-      <div className={`text-center border-b border-gray-100 mb-1.5 ${isPrint ? 'pb-1' : 'pb-4'}`} style={{ borderColor: '#f3f4f6' }}>
-        <h2 className={`${isPrint ? 'text-[11px]' : 'text-xl'} font-black uppercase tracking-tighter leading-none`} style={{ color: '#4f46e5' }}>{settings.tagline1 || 'FINANCE SAVER'}</h2>
+      <div className={`w-full border-b border-gray-100 ${isPrint ? 'mb-1 pb-1' : 'mb-4 pb-4'}`} style={{ borderColor: '#f3f4f6' }}>
+        <h2 className={`${isPrint ? 'text-[11px]' : 'text-xl'} font-black uppercase tracking-tighter leading-none`} style={{ color: '#4f46e5' }}>{settings.tagline1 || 'DREAM DEVELOPMENT SOCIETY'}</h2>
         <p className={`${isPrint ? 'text-[6px]' : 'text-[10px]'} font-bold uppercase tracking-widest mt-0.5`} style={{ color: '#6b7280' }}>{settings.tagline2 || 'COLLECTIVE SAVINGS, STRONG FUTURE'}</p>
       </div>
 
       {/* Member Info */}
-      <div className={`grid grid-cols-2 gap-1 ${isPrint ? 'mb-1' : 'mb-4'}`}>
-        <div>
+      <div className={`w-full grid grid-cols-2 gap-1 ${isPrint ? 'mb-1.5' : 'mb-4'}`}>
+        <div className="flex flex-col items-center">
           <span className="font-bold uppercase text-[7px] block mb-0.5" style={{ color: '#9ca3af' }}>Member</span>
-          <p className={`${isPrint ? 'text-[10px]' : 'text-sm'} font-black leading-tight truncate`} style={{ color: '#111827' }}>{data.member.name}</p>
-          <p className={`${isPrint ? 'text-[6px]' : 'text-[10px]'} font-mono leading-none`} style={{ color: '#6b7280' }}>{data.member.memberId}</p>
+          <p className={`${isPrint ? 'text-[9px]' : 'text-sm'} font-black leading-tight break-words px-1`} style={{ color: '#111827' }}>
+            {data.member.name}
+          </p>
+          <p className={`${isPrint ? 'text-[6px]' : 'text-[10px]'} font-mono mt-0.5 leading-none`} style={{ color: '#6b7280' }}>{data.member.memberId}</p>
         </div>
-        <div className="text-right">
+        <div className="flex flex-col items-center">
           <span className="font-bold uppercase text-[7px] block mb-0.5" style={{ color: '#9ca3af' }}>Balance</span>
           <p className={`${isPrint ? 'text-[10px]' : 'text-sm'} font-black`} style={{ color: '#111827' }}>{formatCurrency(data.totalBalance)}</p>
         </div>
       </div>
 
       {/* Transaction Detail */}
-      <div className={`rounded-lg flex justify-between items-center border relative overflow-hidden ${isPrint ? 'p-1.5' : 'p-4'}`} style={{ backgroundColor: '#f9faff', borderColor: '#eef2ff' }}>
-        <div>
+      <div className={`w-full rounded-lg flex flex-col items-center justify-center border relative overflow-hidden ${isPrint ? 'p-1.5 mb-1.5' : 'p-4'}`} style={{ backgroundColor: '#f9faff', borderColor: '#eef2ff' }}>
+        <div className="text-center">
           <span className="font-bold text-[7px] uppercase block mb-0.5" style={{ color: '#6b7280' }}>Deposit Amount</span>
           <p className={`${isPrint ? 'text-base' : 'text-2xl'} font-black leading-none`} style={{ color: '#4f46e5' }}>{formatCurrency(data.amount)}</p>
           <p className={`font-bold mt-1 uppercase tracking-tighter ${isPrint ? 'text-[6px]' : 'text-[10px]'}`} style={{ color: '#9ca3af' }}>
@@ -188,8 +190,8 @@ const ReceiptCard = ({ data, settings, isPrint = false }: ReceiptCardProps) => {
           </p>
         </div>
         
-        {/* Success Stamp */}
-        <div className="rotate-[-10deg] flex flex-col items-center">
+        {/* Success Stamp - Positioned relative to receipt for better centering */}
+        <div className={`mt-1 rotate-[-10deg] flex flex-col items-center`}>
           <div className={`border-[1px] rounded-full p-0.5 flex items-center justify-center bg-white shadow-sm ${isPrint ? 'w-8 h-8' : 'w-16 h-16'}`} style={{ borderColor: '#10b981' }}>
             <div className="border border-dashed rounded-full w-full h-full flex flex-col items-center justify-center" style={{ borderColor: '#10b981' }}>
               <span className={`${isPrint ? 'text-[6px]' : 'text-[10px]'} font-black leading-none`} style={{ color: '#059669' }}>PAID</span>
@@ -199,7 +201,7 @@ const ReceiptCard = ({ data, settings, isPrint = false }: ReceiptCardProps) => {
         </div>
       </div>
 
-      <div className="mt-auto pt-1.5 border-t border-gray-50 flex justify-between items-center" style={{ borderColor: '#f9fafb' }}>
+      <div className={`w-full pt-1.5 border-t border-gray-50 flex justify-between items-center ${isPrint ? '' : 'mt-auto'}`} style={{ borderColor: '#f9fafb' }}>
         <span className="text-[6px] font-bold uppercase tracking-widest italic font-mono" style={{ color: '#d1d5db' }}>Ref: {data.ref || Math.random().toString(36).substring(2, 6).toUpperCase()}</span>
         <span className="text-[6px] font-bold uppercase tracking-widest text-[#d1d5db]">Verified</span>
       </div>
@@ -208,7 +210,7 @@ const ReceiptCard = ({ data, settings, isPrint = false }: ReceiptCardProps) => {
 };
 
 export const AdminDashboard = () => {
-  const { members, transactions, settings, emergencyContacts, loading, error } = useData();
+  const { members, transactions, settings, emergencyContacts, expenses, loading, error } = useData();
 
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
@@ -222,6 +224,10 @@ export const AdminDashboard = () => {
   const [editingEmergency, setEditingEmergency] = useState<any | null>(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isConfirmDeleteExpenseOpen, setIsConfirmDeleteExpenseOpen] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<string | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [receiptData, setReceiptData] = useState<any[]>([]);
   const [depositView, setDepositView] = useState<'pending' | 'completed'>('pending');
   const [depositAmount, setDepositAmount] = useState('');
@@ -278,7 +284,7 @@ export const AdminDashboard = () => {
 
   // Settings Form State
   const [settingsForm, setSettingsForm] = useState({
-    interestRate: 5,
+    interestAmount: 500,
     duration: 12,
     startDate: new Date().toISOString().slice(0, 7),
     announcement: '',
@@ -300,6 +306,13 @@ export const AdminDashboard = () => {
     phone: ''
   });
 
+  const [expenseForm, setExpenseForm] = useState({
+    title: '',
+    detail: '',
+    amount: '',
+    date: new Date().toISOString().slice(0, 10)
+  });
+
   const [expandedSections, setExpandedSections] = useState({
     interest: true,
     announcement: false,
@@ -315,7 +328,7 @@ export const AdminDashboard = () => {
   useEffect(() => {
     if (settings) {
       setSettingsForm({
-        interestRate: settings.interestRate,
+        interestAmount: settings.interestAmount || 0,
         duration: settings.duration,
         startDate: settings.startDate || new Date().toISOString().slice(0, 7),
         announcement: settings.announcement || '',
@@ -629,11 +642,62 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleSaveExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const amount = parseFloat(expenseForm.amount);
+      if (isNaN(amount)) throw new Error('Invalid amount');
+
+      const data = {
+        title: expenseForm.title,
+        detail: expenseForm.detail,
+        amount: amount,
+        date: expenseForm.date,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editingExpense) {
+        await updateDoc(doc(db, 'expenses', editingExpense.id), data);
+      } else {
+        await addDoc(collection(db, 'expenses'), {
+          ...data,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      setStatusMessage({ type: 'success', text: `Expense ${editingExpense ? 'updated' : 'added'} successfully` });
+      setIsExpenseModalOpen(false);
+      setEditingExpense(null);
+      setExpenseForm({ 
+        title: '', 
+        detail: '', 
+        amount: '', 
+        date: new Date().toISOString().slice(0, 10) 
+      });
+    } catch (err) {
+      console.error(err);
+      setStatusMessage({ type: 'error', text: 'Error saving expense: ' + (err instanceof Error ? err.message : 'Unknown error') });
+    }
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!expenseToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'expenses', expenseToDelete));
+      setStatusMessage({ type: 'success', text: 'Expense deleted successfully' });
+      setIsConfirmDeleteExpenseOpen(false);
+      setExpenseToDelete(null);
+    } catch (err) {
+      console.error(err);
+      setStatusMessage({ type: 'error', text: 'Error deleting expense: ' + (err instanceof Error ? err.message : 'Unknown error') });
+    }
+  };
+
   const handleUpdateSettings = async () => {
     try {
       const settingsColl = collection(db, 'settings');
       const data = {
-        interestRate: Number(settingsForm.interestRate),
+        interestAmount: Number(settingsForm.interestAmount),
         duration: Number(settingsForm.duration),
         announcement: settingsForm.announcement,
         showAnnouncement: settingsForm.showAnnouncement,
@@ -727,16 +791,20 @@ export const AdminDashboard = () => {
   }));
 
   const totalDeposited = members.reduce((sum, m) => sum + m.totalDeposited, 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalInterest = settings.interestAmount || 0;
   
-  // Calculate total interest by summing individual member interests
-  const memberCalculations = members.map(m => calculateInterest(
-    m.totalDeposited,
-    settings.interestRate,
-    settings.duration
-  ));
+  // Distribute total interest among members based on their deposit weight
+  const memberCalculations = members.map(m => {
+    const weight = totalDeposited > 0 ? m.totalDeposited / totalDeposited : 0;
+    const interestEarned = totalInterest * weight;
+    return {
+      interestEarned,
+      finalBalance: m.totalDeposited + interestEarned
+    };
+  });
   
-  const totalInterest = memberCalculations.reduce((sum, c) => sum + c.interestEarned, 0);
-  const totalFinal = totalDeposited + totalInterest;
+  const totalFinal = totalDeposited + totalInterest - totalExpenses;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dashboard-root">
@@ -772,6 +840,21 @@ export const AdminDashboard = () => {
               className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" /> Add Member
+            </button>
+            <button 
+              onClick={() => {
+                setEditingExpense(null);
+                setExpenseForm({ 
+                  title: '', 
+                  detail: '', 
+                  amount: '', 
+                  date: new Date().toISOString().slice(0, 10) 
+                });
+                setIsExpenseModalOpen(true);
+              }}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all shadow-sm"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" /> Add Expense
             </button>
             <div className="flex items-center gap-2">
               <button 
@@ -832,13 +915,16 @@ export const AdminDashboard = () => {
             >
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Interest Rate (%)</label>
-                  <input 
-                    type="number" 
-                    value={settingsForm.interestRate} 
-                    onChange={(e) => setSettingsForm({...settingsForm, interestRate: Number(e.target.value)})}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
-                  />
+                  <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Interest Amount (Fixed)</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-gray-400 text-sm">৳</span>
+                    <input 
+                      type="number" 
+                      value={settingsForm.interestAmount} 
+                      onChange={(e) => setSettingsForm({...settingsForm, interestAmount: Number(e.target.value)})}
+                      className="w-full pl-7 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Duration (Months)</label>
@@ -993,7 +1079,7 @@ export const AdminDashboard = () => {
                       type="text" 
                       value={settingsForm.tagline1} 
                       onChange={(e) => setSettingsForm({...settingsForm, tagline1: e.target.value})}
-                      placeholder="e.g., Together Dreams"
+                      placeholder="e.g., Dream Development Society"
                       className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
@@ -1208,67 +1294,6 @@ export const AdminDashboard = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* New Emergency Contacts Sub-section */}
-                  <div className="mt-8 border-t border-gray-100 pt-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Emergency Contacts</h4>
-                        <p className="text-xs text-gray-500">Additional emergence contacts listed below the main cards</p>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          setEditingEmergency(null);
-                          setEmergencyForm({ name: '', position: '', phone: '' });
-                          setIsEmergencyModalOpen(true);
-                        }}
-                        className="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors"
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-1" /> Add New Contact
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {emergencyContacts.map((contact) => (
-                        <div key={contact.id} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm flex items-start justify-between">
-                          <div>
-                            <p className="text-sm font-bold text-gray-900">{contact.name}</p>
-                            <p className="text-[10px] font-medium text-indigo-600 uppercase mb-2">{contact.position}</p>
-                            <p className="text-xs text-gray-600 flex items-center">
-                              <Phone className="w-3 h-3 mr-1 text-gray-400" /> {contact.phone}
-                            </p>
-                          </div>
-                          <div className="flex gap-1">
-                            <button 
-                              onClick={() => {
-                                setEditingEmergency(contact);
-                                setEmergencyForm({ name: contact.name, position: contact.position, phone: contact.phone });
-                                setIsEmergencyModalOpen(true);
-                              }}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                setEmergencyToDelete(contact.id);
-                                setIsConfirmDeleteEmergencyOpen(true);
-                              }}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      {emergencyContacts.length === 0 && (
-                        <div className="col-span-full py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                          <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                          <p className="text-sm text-gray-400">No emergency contacts listed yet</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               </motion.div>
             )}
@@ -1281,6 +1306,148 @@ export const AdminDashboard = () => {
             >
               <Save className="w-5 h-5 mr-2" /> Save All Settings
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Expenses Records (Easily Accessible) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center">
+            <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
+            <h2 className="text-lg font-bold text-gray-900">Expense Records</h2>
+          </div>
+          <button 
+            onClick={() => {
+              setEditingExpense(null);
+              setExpenseForm({ 
+                title: '', 
+                detail: '', 
+                amount: '', 
+                date: new Date().toISOString().slice(0, 10) 
+              });
+              setIsExpenseModalOpen(true);
+            }}
+            className="inline-flex items-center px-3 py-1.5 bg-red-50 text-red-600 text-xs font-bold rounded-lg hover:bg-red-100 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add Expense
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {expenses.length > 0 ? (
+              expenses.map((expense) => (
+                <div key={expense.id} className="bg-gray-50 p-4 rounded-2xl border border-gray-100 shadow-sm relative group overflow-hidden">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="bg-red-100 text-red-600 p-2 rounded-xl">
+                      <AlertTriangle className="w-4 h-4" />
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-gray-900">{formatCurrency(expense.amount)}</p>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{new Date(expense.date).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-gray-900 leading-tight">{expense.title}</h5>
+                    {expense.detail && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{expense.detail}</p>}
+                  </div>
+                  
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => {
+                        setEditingExpense(expense);
+                        setExpenseForm({
+                          title: expense.title,
+                          detail: expense.detail || '',
+                          amount: expense.amount.toString(),
+                          date: expense.date
+                        });
+                        setIsExpenseModalOpen(true);
+                      }}
+                      className="p-1.5 text-indigo-600 bg-white shadow-sm rounded-lg hover:bg-indigo-50 border border-gray-100"
+                    >
+                      <Edit2 className="w-3 h-3" />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setExpenseToDelete(expense.id);
+                        setIsConfirmDeleteExpenseOpen(true);
+                      }}
+                      className="p-1.5 text-red-600 bg-white shadow-sm rounded-lg hover:bg-red-50 border border-gray-100"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full py-8 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-3xl text-gray-400">
+                <AlertCircle className="w-8 h-8 mb-2 opacity-50" />
+                <p className="font-medium text-sm">No expenses recorded yet</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Emergency Contacts (Easily Accessible) */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center">
+            <Users className="w-5 h-5 text-indigo-500 mr-2" />
+            <h2 className="text-lg font-bold text-gray-900">Emergency Contacts</h2>
+          </div>
+          <button 
+            onClick={() => {
+              setEditingEmergency(null);
+              setEmergencyForm({ name: '', position: '', phone: '' });
+              setIsEmergencyModalOpen(true);
+            }}
+            className="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add Contact
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {emergencyContacts.map((contact) => (
+              <div key={contact.id} className="p-4 bg-gray-50 border border-gray-200 rounded-xl shadow-sm flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-bold text-gray-900">{contact.name}</p>
+                  <p className="text-[10px] font-medium text-indigo-600 uppercase mb-2">{contact.position}</p>
+                  <p className="text-xs text-gray-600 flex items-center">
+                    <Phone className="w-3 h-3 mr-1 text-gray-400" /> {contact.phone}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => {
+                      setEditingEmergency(contact);
+                      setEmergencyForm({ name: contact.name, position: contact.position, phone: contact.phone });
+                      setIsEmergencyModalOpen(true);
+                    }}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setEmergencyToDelete(contact.id);
+                      setIsConfirmDeleteEmergencyOpen(true);
+                    }}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {emergencyContacts.length === 0 && (
+              <div className="col-span-full py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No emergency contacts listed yet</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1313,9 +1480,15 @@ export const AdminDashboard = () => {
           <div className="bg-indigo-600 p-6 rounded-2xl text-white shadow-lg shadow-indigo-200">
             <p className="text-indigo-100 text-sm font-medium">Total Final Balance</p>
             <h4 className="text-3xl font-bold mt-1">{formatCurrency(totalFinal)}</h4>
-            <div className="mt-4 pt-4 border-t border-indigo-500 flex justify-between items-center text-sm">
-              <span>Interest Earned</span>
-              <span className="font-bold">+{formatCurrency(totalInterest)}</span>
+            <div className="mt-4 pt-4 border-t border-indigo-500 space-y-2 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-indigo-100">Interest Earned</span>
+                <span className="font-bold">+{formatCurrency(totalInterest)}</span>
+              </div>
+              <div className="flex justify-between items-center text-red-200">
+                <span>Total Expenses</span>
+                <span className="font-bold">-{formatCurrency(totalExpenses)}</span>
+              </div>
             </div>
           </div>
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -1887,6 +2060,125 @@ export const AdminDashboard = () => {
                   className="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-100"
                 >
                   Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add/Edit Expense Modal */}
+      <AnimatePresence>
+        {isExpenseModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+            >
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-red-600 text-white">
+                <h3 className="text-lg font-bold">
+                  {editingExpense ? 'Edit Expense Record' : 'Add New Expense'}
+                </h3>
+                <button onClick={() => setIsExpenseModalOpen(false)} className="p-1 hover:bg-red-500 rounded-lg">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <form onSubmit={handleSaveExpense} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Expense Title</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={expenseForm.title} 
+                    onChange={(e) => setExpenseForm({...expenseForm, title: e.target.value})}
+                    placeholder="e.g., Office Rent, Utility Bill"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Amount</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-gray-400">৳</span>
+                    <input 
+                      required
+                      type="number"
+                      step="any"
+                      value={expenseForm.amount} 
+                      onChange={(e) => setExpenseForm({...expenseForm, amount: e.target.value})}
+                      placeholder="0.00"
+                      className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                  <input 
+                    required
+                    type="date" 
+                    value={expenseForm.date} 
+                    onChange={(e) => setExpenseForm({...expenseForm, date: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Details (Optional)</label>
+                  <textarea 
+                    value={expenseForm.detail} 
+                    onChange={(e) => setExpenseForm({...expenseForm, detail: e.target.value})}
+                    placeholder="Add more context about this expense..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 min-h-[80px]"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsExpenseModalOpen(false)}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-100"
+                  >
+                    {editingExpense ? 'Update Record' : 'Save Expense'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm Delete Expense Modal */}
+      <AnimatePresence>
+        {isConfirmDeleteExpenseOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center"
+            >
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Expense?</h3>
+              <p className="text-gray-500 text-sm mb-6">This will permanently remove this expense record and restore the balance. This action cannot be undone.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsConfirmDeleteExpenseOpen(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200"
+                >
+                  No, Keep it
+                </button>
+                <button 
+                  onClick={handleDeleteExpense}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-100"
+                >
+                  Yes, Delete
                 </button>
               </div>
             </motion.div>

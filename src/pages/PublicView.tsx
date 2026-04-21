@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export const PublicView = () => {
-  const { members, transactions, settings, emergencyContacts, loading, error } = useData();
+  const { members, transactions, settings, emergencyContacts, expenses, loading, error } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -95,16 +95,20 @@ export const PublicView = () => {
   }
 
   const totalDeposited = members.reduce((sum, m) => sum + m.totalDeposited, 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalInterest = settings.interestAmount || 0;
   
-  // Calculate total interest by summing individual member interests
-  const memberCalculations = members.map(m => calculateInterest(
-    m.totalDeposited,
-    settings.interestRate,
-    settings.duration
-  ));
+  // Distribute total interest among members based on their deposit weight
+  const memberCalculations = members.map(m => {
+    const weight = totalDeposited > 0 ? m.totalDeposited / totalDeposited : 0;
+    const interestEarned = totalInterest * weight;
+    return {
+      interestEarned,
+      finalBalance: m.totalDeposited + interestEarned
+    };
+  });
   
-  const totalInterest = memberCalculations.reduce((sum, c) => sum + c.interestEarned, 0);
-  const totalFinal = totalDeposited + totalInterest;
+  const totalFinal = totalDeposited + totalInterest - totalExpenses;
 
   const filteredMembers = members.filter(m => 
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -115,6 +119,7 @@ export const PublicView = () => {
     { label: 'Total Members', value: members.length, icon: Users, color: 'bg-blue-500' },
     { label: 'Total Deposited', value: formatCurrency(totalDeposited), icon: PiggyBank, color: 'bg-green-500' },
     { label: 'Interest Earned', value: formatCurrency(totalInterest), icon: TrendingUp, color: 'bg-amber-500' },
+    { label: 'Total Expenses', value: formatCurrency(totalExpenses), icon: AlertTriangle, color: 'bg-red-500' },
     { label: 'Final Balance', value: formatCurrency(totalFinal), icon: Wallet, color: 'bg-indigo-600' },
   ];
 
@@ -206,7 +211,7 @@ export const PublicView = () => {
       </header>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-10">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5 mb-10">
         {stats.map((stat, idx) => (
           <motion.div
             key={stat.label}
@@ -411,11 +416,8 @@ export const PublicView = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMembers.map((member) => {
-                const { finalBalance } = calculateInterest(
-                  member.totalDeposited,
-                  settings.interestRate,
-                  settings.duration
-                );
+                const weight = totalDeposited > 0 ? member.totalDeposited / totalDeposited : 0;
+                const finalBalance = member.totalDeposited + (totalInterest * weight);
                 
                 const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === viewMonth);
                 const totalForViewMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
@@ -572,6 +574,48 @@ export const PublicView = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Expenses Records Section (Public) */}
+      {expenses.length > 0 && (
+        <div className="mt-16 mb-12">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-bold text-gray-900">Expenses Records</h2>
+            <p className="text-gray-500 mt-2 text-sm uppercase tracking-widest font-bold">Transparent tracking of group expenditures</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {expenses.map((expense, idx) => (
+              <motion.div
+                key={expense.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: idx * 0.05 }}
+                viewport={{ once: true }}
+                className="bg-white p-5 rounded-3xl shadow-md border border-gray-100 relative overflow-hidden"
+              >
+                <div className="flex justify-between items-start mb-3">
+                  <div className="bg-red-50 text-red-600 p-2.5 rounded-2xl">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-black text-gray-900 leading-none">{formatCurrency(expense.amount)}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 tracking-tighter">
+                      {new Date(expense.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-gray-900 leading-tight mb-1">{expense.title}</h4>
+                  {expense.detail && <p className="text-xs text-gray-500 line-clamp-2">{expense.detail}</p>}
+                </div>
+                <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between">
+                  <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest italic">Expenditure</span>
+                  <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Verified</span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Contact Persons Section */}
       {settings.showContactPersons !== false && (settings.contactPerson1?.name || settings.contactPerson2?.name) && (
