@@ -53,7 +53,7 @@ async function startServer() {
   const app = express();
   app.use(express.json());
 
-  app.get('/api/finance-based-saving/debug/logs', (req, res) => {
+  app.get('/api/admin/debug/logs', (req, res) => {
     res.send(logs.join('\n'));
   });
 
@@ -140,7 +140,7 @@ async function startServer() {
     }
   };
 
-  app.get('/api/finance-based-saving/debug/members', checkAdmin, async (req, res) => {
+  app.get('/api/admin/debug/members', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
       const snapshot = await clientGetDocs(clientCollection(db, 'members'));
@@ -151,7 +151,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/finance-based-saving/members', checkAdmin, async (req, res) => {
+  app.post('/api/admin/members', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
       const docRef = await clientAddDoc(clientCollection(db, 'members'), {
@@ -164,7 +164,7 @@ async function startServer() {
     }
   });
 
-  app.put('/api/finance-based-saving/members/:id', checkAdmin, async (req, res) => {
+  app.put('/api/admin/members/:id', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
       await clientUpdateDoc(clientDoc(db, 'members', req.params.id), req.body);
@@ -174,7 +174,7 @@ async function startServer() {
     }
   });
 
-  app.delete('/api/finance-based-saving/members/:id', checkAdmin, async (req, res) => {
+  app.delete('/api/admin/members/:id', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
       await clientDeleteDoc(clientDoc(db, 'members', req.params.id));
@@ -184,7 +184,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/finance-based-saving/transactions', checkAdmin, async (req, res) => {
+  app.post('/api/admin/transactions', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
       const docRef = await clientAddDoc(clientCollection(db, 'transactions'), {
@@ -197,7 +197,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/finance-based-saving/deposit', checkAdmin, async (req, res) => {
+  app.post('/api/admin/deposit', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     const { memberId, amount, date, month, newTotal } = req.body;
     console.log('Processing deposit:', { memberId, amount, date, month, newTotal });
@@ -239,7 +239,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/finance-based-saving/settings', checkAdmin, async (req, res) => {
+  app.post('/api/admin/settings', checkAdmin, async (req, res) => {
     if (!db) return res.status(500).json({ error: 'Database not initialized' });
     try {
       const settingsColl = clientCollection(db, 'settings');

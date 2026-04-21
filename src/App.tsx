@@ -28,13 +28,15 @@ export default function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar />
+        <div className="no-print">
+          <Navbar />
+        </div>
         <main className="flex-grow">
           <Routes>
             <Route path="/" element={<PublicView />} />
             <Route path="/finance-based-saving-login" element={<Login />} />
             <Route 
-              path="/finance-based-saving" 
+              path="/dashboard" 
               element={
                 <ProtectedRoute>
                   <AdminDashboard />
@@ -44,7 +46,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        <footer className="bg-white border-t border-gray-200 py-8">
+        <footer className="bg-white border-t border-gray-200 py-8 no-print">
           <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
             &copy; {new Date().getFullYear()} Savings Group Manager. All rights reserved.
           </div>

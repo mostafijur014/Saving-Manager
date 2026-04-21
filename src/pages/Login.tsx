@@ -18,7 +18,7 @@ export const Login = () => {
     setError('');
     try {
       await login(username, password);
-      navigate('/finance-based-saving');
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Invalid username or password');
     }

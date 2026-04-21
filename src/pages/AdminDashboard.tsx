@@ -7,11 +7,10 @@ import {
   Plus, Edit2, Trash2, Settings as SettingsIcon, 
   CheckCircle, XCircle, AlertCircle, Download, Save, X,
   Calendar, Clock, Phone, ChevronDown, ChevronUp,
-  AlertTriangle, PiggyBank, Users
+  AlertTriangle, PiggyBank, Users, Printer
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
 import { 
   DndContext, 
   closestCenter,
@@ -147,6 +146,67 @@ const SortableMemberRow: React.FC<{
   );
 };
 
+interface ReceiptCardProps {
+  data: any;
+  settings: any;
+  isPrint?: boolean;
+  key?: any;
+}
+
+const ReceiptCard = ({ data, settings, isPrint = false }: ReceiptCardProps) => {
+  return (
+    <div 
+      className={`bg-white shadow-md border border-gray-100 relative overflow-hidden flex flex-col ${isPrint ? 'p-2.5 m-0 rounded-lg h-full' : 'p-6 rounded-3xl min-h-[250px]'}`} 
+      style={isPrint ? { boxShadow: 'none', border: '1px solid #e1e4e8', backgroundColor: '#ffffff' } : {}}
+    >
+      {/* Header */}
+      <div className={`text-center border-b border-gray-100 mb-1.5 ${isPrint ? 'pb-1' : 'pb-4'}`} style={{ borderColor: '#f3f4f6' }}>
+        <h2 className={`${isPrint ? 'text-[11px]' : 'text-xl'} font-black uppercase tracking-tighter leading-none`} style={{ color: '#4f46e5' }}>{settings.tagline1 || 'FINANCE SAVER'}</h2>
+        <p className={`${isPrint ? 'text-[6px]' : 'text-[10px]'} font-bold uppercase tracking-widest mt-0.5`} style={{ color: '#6b7280' }}>{settings.tagline2 || 'COLLECTIVE SAVINGS, STRONG FUTURE'}</p>
+      </div>
+
+      {/* Member Info */}
+      <div className={`grid grid-cols-2 gap-1 ${isPrint ? 'mb-1' : 'mb-4'}`}>
+        <div>
+          <span className="font-bold uppercase text-[7px] block mb-0.5" style={{ color: '#9ca3af' }}>Member</span>
+          <p className={`${isPrint ? 'text-[10px]' : 'text-sm'} font-black leading-tight truncate`} style={{ color: '#111827' }}>{data.member.name}</p>
+          <p className={`${isPrint ? 'text-[6px]' : 'text-[10px]'} font-mono leading-none`} style={{ color: '#6b7280' }}>{data.member.memberId}</p>
+        </div>
+        <div className="text-right">
+          <span className="font-bold uppercase text-[7px] block mb-0.5" style={{ color: '#9ca3af' }}>Balance</span>
+          <p className={`${isPrint ? 'text-[10px]' : 'text-sm'} font-black`} style={{ color: '#111827' }}>{formatCurrency(data.totalBalance)}</p>
+        </div>
+      </div>
+
+      {/* Transaction Detail */}
+      <div className={`rounded-lg flex justify-between items-center border relative overflow-hidden ${isPrint ? 'p-1.5' : 'p-4'}`} style={{ backgroundColor: '#f9faff', borderColor: '#eef2ff' }}>
+        <div>
+          <span className="font-bold text-[7px] uppercase block mb-0.5" style={{ color: '#6b7280' }}>Deposit Amount</span>
+          <p className={`${isPrint ? 'text-base' : 'text-2xl'} font-black leading-none`} style={{ color: '#4f46e5' }}>{formatCurrency(data.amount)}</p>
+          <p className={`font-bold mt-1 uppercase tracking-tighter ${isPrint ? 'text-[6px]' : 'text-[10px]'}`} style={{ color: '#9ca3af' }}>
+            {data.date}
+          </p>
+        </div>
+        
+        {/* Success Stamp */}
+        <div className="rotate-[-10deg] flex flex-col items-center">
+          <div className={`border-[1px] rounded-full p-0.5 flex items-center justify-center bg-white shadow-sm ${isPrint ? 'w-8 h-8' : 'w-16 h-16'}`} style={{ borderColor: '#10b981' }}>
+            <div className="border border-dashed rounded-full w-full h-full flex flex-col items-center justify-center" style={{ borderColor: '#10b981' }}>
+              <span className={`${isPrint ? 'text-[6px]' : 'text-[10px]'} font-black leading-none`} style={{ color: '#059669' }}>PAID</span>
+              <span className="text-[3px] font-bold leading-none mt-0.5 tracking-widest" style={{ color: '#10b981' }}>SUCCESS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-auto pt-1.5 border-t border-gray-50 flex justify-between items-center" style={{ borderColor: '#f9fafb' }}>
+        <span className="text-[6px] font-bold uppercase tracking-widest italic font-mono" style={{ color: '#d1d5db' }}>Ref: {data.ref || Math.random().toString(36).substring(2, 6).toUpperCase()}</span>
+        <span className="text-[6px] font-bold uppercase tracking-widest text-[#d1d5db]">Verified</span>
+      </div>
+    </div>
+  );
+};
+
 export const AdminDashboard = () => {
   const { members, transactions, settings, emergencyContacts, loading, error } = useData();
 
@@ -161,6 +221,8 @@ export const AdminDashboard = () => {
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [editingEmergency, setEditingEmergency] = useState<any | null>(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState<any[]>([]);
   const [depositView, setDepositView] = useState<'pending' | 'completed'>('pending');
   const [depositAmount, setDepositAmount] = useState('');
   const [depositMonth, setDepositMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -294,7 +356,7 @@ export const AdminDashboard = () => {
   const expectedMonths = chartMonths.length;
 
   // Logic for the 3 columns
-  const currentMonth = new Date().toISOString().slice(0, 7);
+  const currentMonth = depositMonth;
   
   // Column 1: All members and their deposit this month
   const column1Data = members.map(member => {
@@ -617,7 +679,36 @@ export const AdminDashboard = () => {
     }
   };
 
-  const exportToCSV = () => {
+  const handlePrintReceipt = (memberIds: string[]) => {
+    const data = memberIds.map(id => {
+      const member = members.find(m => m.id === id);
+      if (!member) return null;
+      
+      const monthTransactions = transactions.filter(t => t.memberId === member.id && t.month === currentMonth);
+      const paidThisMonth = monthTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const lastTransaction = monthTransactions[monthTransactions.length - 1];
+      
+      // Calculate total balance for this member
+      const allMemberTransactions = transactions.filter(t => t.memberId === member.id);
+      const totalBalanceCount = allMemberTransactions.reduce((sum, t) => sum + t.amount, 0);
+
+      const timestamp = lastTransaction ? new Date(lastTransaction.date) : new Date();
+
+      return {
+        member,
+        amount: paidThisMonth,
+        date: timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        time: timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        totalBalance: totalBalanceCount
+      };
+    }).filter(Boolean);
+
+    setReceiptData(data);
+    setIsReceiptModalOpen(true);
+  };
+
+    // Removed handleDownloadPDF as per user request
+    const exportToCSV = () => {
     const headers = ['Name', 'ID', 'Monthly Contribution', 'Total Deposited', 'Status'];
     const rows = members.map(m => [m.name, m.memberId, m.monthlyContribution, m.totalDeposited, m.status]);
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
@@ -648,8 +739,10 @@ export const AdminDashboard = () => {
   const totalFinal = totalDeposited + totalInterest;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 dashboard-root">
+      {/* Screen Content */}
+      <div className="no-print-area">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-gray-500">Manage members, deposits, and system settings.</p>
@@ -1264,15 +1357,26 @@ export const AdminDashboard = () => {
         {/* Column 2: Completed This Month */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]">
           <div className="bg-green-600 px-4 py-3 flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Completed</h3>
-            <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">
-              {column2Data.length} Members
-            </span>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Completed</h3>
+              <span className="text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full font-bold">
+                {column2Data.length}
+              </span>
+            </div>
+            {column2Data.length > 0 && (
+              <button 
+                onClick={() => handlePrintReceipt(column2Data.map(m => m.id))}
+                className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-400 transition-colors flex items-center gap-1 text-[10px] font-bold uppercase"
+                title="Bulk Print All"
+              >
+                <Printer className="w-3 h-3" /> Bulk
+              </button>
+            )}
           </div>
           <div className="p-4 overflow-y-auto flex-grow space-y-3">
             {column2Data.length > 0 ? (
               column2Data.map(member => (
-                <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-green-50 border border-green-100">
+                <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-green-50 border border-green-100 group">
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center">
                       <PiggyBank className="w-3.5 h-3.5 text-green-700" />
@@ -1282,9 +1386,18 @@ export const AdminDashboard = () => {
                       <p className="text-[10px] text-green-600 font-mono mt-1">{member.memberId}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-black text-green-700">{formatCurrency(member.paidThisMonth)}</p>
-                    <p className="text-[9px] text-green-600 uppercase font-bold">Success</p>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm font-black text-green-700">{formatCurrency(member.paidThisMonth)}</p>
+                      <p className="text-[9px] text-green-600 uppercase font-bold">Success</p>
+                    </div>
+                    <button 
+                      onClick={() => handlePrintReceipt([member.id])}
+                      className="p-1.5 text-green-700 hover:bg-green-200 rounded-lg transition-colors"
+                      title="Print Receipt"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               ))
@@ -1832,6 +1945,77 @@ export const AdminDashboard = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Receipt Modal */}
+      <AnimatePresence>
+        {isReceiptModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm no-print">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-gray-100 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              <div className="px-6 py-4 bg-white border-b border-gray-100 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Printer className="w-5 h-5 text-indigo-600" />
+                  <h3 className="text-xl font-bold text-gray-900">Transaction Receipts</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      const element = document.getElementById('receipts-print-area');
+                      if (element) {
+                        // Reset visibility/height to default before printing (relying on CSS)
+                        element.style.visibility = 'visible';
+                        element.style.height = 'auto';
+                        setTimeout(() => {
+                          window.print();
+                          element.style.visibility = '';
+                          element.style.height = '';
+                        }, 500);
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-bold transition-all active:scale-95 shadow-lg shadow-indigo-100"
+                  >
+                    <Printer className="w-4 h-4" /> {receiptData.length > 1 ? 'Print All' : 'Print It'}
+                  </button>
+                  <button 
+                    onClick={() => { setIsReceiptModalOpen(false); setReceiptData([]); }} 
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-8 overflow-y-auto bg-gray-100 flex-grow">
+                <div className="max-w-4xl mx-auto no-print">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {receiptData.map((data, idx) => (
+                      <ReceiptCard key={`preview-${idx}`} data={data} settings={settings} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      </div>
+
+      {/* Printable Area (Invisible on screen) */}
+      <div className="print-only" id="receipts-print-area">
+        <div className="print-grid-container">
+          <div className="print-grid">
+            {receiptData.map((data, idx) => (
+              <div key={`wrapper-${idx}`} className="print-card-wrapper">
+                <ReceiptCard data={data} settings={settings} isPrint={true} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
