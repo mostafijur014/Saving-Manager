@@ -28,5 +28,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if true; // Required for server-side Client SDK writes
     }
+
+    // Emergency Contacts collection
+    match /emergencyContacts/{contactId} {
+      allow read: if true;
+      allow write: if true; // Required for server-side Client SDK writes
+    }
   }
 }

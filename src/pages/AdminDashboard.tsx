@@ -148,14 +148,18 @@ const SortableMemberRow: React.FC<{
 };
 
 export const AdminDashboard = () => {
-  const { members, transactions, settings, loading, error } = useData();
+  const { members, transactions, settings, emergencyContacts, loading, error } = useData();
 
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [isConfirmDeleteEmergencyOpen, setIsConfirmDeleteEmergencyOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
+  const [emergencyToDelete, setEmergencyToDelete] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [editingEmergency, setEditingEmergency] = useState<any | null>(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [depositView, setDepositView] = useState<'pending' | 'completed'>('pending');
   const [depositAmount, setDepositAmount] = useState('');
@@ -222,7 +226,16 @@ export const AdminDashboard = () => {
     tagline2: '',
     showContactPersons: true,
     contactPerson1: { name: '', role: '', phone: '', email: '', imageUrl: '' },
-    contactPerson2: { name: '', role: '', phone: '', email: '', imageUrl: '' }
+    contactPerson2: { name: '', role: '', phone: '', email: '', imageUrl: '' },
+    dueStartDate: 15,
+    dueWarningDate: 17,
+    dueEndDate: 20
+  });
+
+  const [emergencyForm, setEmergencyForm] = useState({
+    name: '',
+    position: '',
+    phone: ''
   });
 
   const [expandedSections, setExpandedSections] = useState({
@@ -250,7 +263,10 @@ export const AdminDashboard = () => {
         tagline2: settings.tagline2 || '',
         showContactPersons: settings.showContactPersons !== undefined ? settings.showContactPersons : true,
         contactPerson1: settings.contactPerson1 || { name: '', role: '', phone: '', email: '', imageUrl: '' },
-        contactPerson2: settings.contactPerson2 || { name: '', role: '', phone: '', email: '', imageUrl: '' }
+        contactPerson2: settings.contactPerson2 || { name: '', role: '', phone: '', email: '', imageUrl: '' },
+        dueStartDate: settings.dueStartDate || 15,
+        dueWarningDate: settings.dueWarningDate || 17,
+        dueEndDate: settings.dueEndDate || 20
       });
     }
   }, [settings]);
@@ -294,7 +310,41 @@ export const AdminDashboard = () => {
   const column3Data = members.map(member => {
     const expectedTotal = expectedMonths * member.monthlyContribution;
     const totalDue = Math.max(0, expectedTotal - member.totalDeposited);
-    return { ...member, totalDue };
+    
+    // Calculate color based on day of month
+    const today = currentTime.getDate();
+    const dueStart = settings.dueStartDate || 15;
+    const dueWarning = settings.dueWarningDate || 17;
+    const dueEnd = settings.dueEndDate || 20;
+
+    let dueColorClass = 'bg-red-50 border-red-100 text-red-900'; // Default
+    let iconBgClass = 'bg-red-200';
+    let iconTextClass = 'text-red-700';
+    let labelColorClass = 'text-red-600';
+
+    if (today >= dueEnd) {
+      dueColorClass = 'bg-red-50 border-red-100 text-red-900';
+      iconBgClass = 'bg-red-200';
+      iconTextClass = 'text-red-700';
+      labelColorClass = 'text-red-600';
+    } else if (today >= dueWarning) {
+      dueColorClass = 'bg-blue-50 border-blue-100 text-blue-900';
+      iconBgClass = 'bg-blue-200';
+      iconTextClass = 'text-blue-700';
+      labelColorClass = 'text-blue-600';
+    } else if (today >= dueStart) {
+      dueColorClass = 'bg-yellow-50 border-yellow-100 text-yellow-900';
+      iconBgClass = 'bg-yellow-200';
+      iconTextClass = 'text-yellow-700';
+      labelColorClass = 'text-yellow-600';
+    } else {
+      dueColorClass = 'bg-red-50 border-red-100 text-red-900';
+      iconBgClass = 'bg-red-200';
+      iconTextClass = 'text-red-700';
+      labelColorClass = 'text-red-600';
+    }
+
+    return { ...member, totalDue, dueColorClass, iconBgClass, iconTextClass, labelColorClass };
   }).filter(m => m.totalDue > 0);
 
   // Auto-clear status message
@@ -473,6 +523,50 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleSaveEmergency = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const data = {
+        name: emergencyForm.name,
+        position: emergencyForm.position,
+        phone: emergencyForm.phone,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editingEmergency) {
+        await updateDoc(doc(db, 'emergencyContacts', editingEmergency.id), data);
+      } else {
+        const maxOrder = emergencyContacts.length > 0 ? Math.max(...emergencyContacts.map(c => c.order || 0)) : -1;
+        await addDoc(collection(db, 'emergencyContacts'), {
+          ...data,
+          order: maxOrder + 1,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      setStatusMessage({ type: 'success', text: `Emergency contact ${editingEmergency ? 'updated' : 'added'} successfully` });
+      setIsEmergencyModalOpen(false);
+      setEditingEmergency(null);
+      setEmergencyForm({ name: '', position: '', phone: '' });
+    } catch (err) {
+      console.error(err);
+      setStatusMessage({ type: 'error', text: 'Error saving emergency contact: ' + (err instanceof Error ? err.message : 'Unknown error') });
+    }
+  };
+
+  const handleDeleteEmergency = async () => {
+    if (!emergencyToDelete) return;
+    try {
+      await deleteDoc(doc(db, 'emergencyContacts', emergencyToDelete));
+      setStatusMessage({ type: 'success', text: 'Emergency contact deleted successfully' });
+      setIsConfirmDeleteEmergencyOpen(false);
+      setEmergencyToDelete(null);
+    } catch (err) {
+      console.error(err);
+      setStatusMessage({ type: 'error', text: 'Error deleting emergency contact: ' + (err instanceof Error ? err.message : 'Unknown error') });
+    }
+  };
+
   const handleUpdateSettings = async () => {
     try {
       const settingsColl = collection(db, 'settings');
@@ -487,6 +581,9 @@ export const AdminDashboard = () => {
         showContactPersons: settingsForm.showContactPersons,
         contactPerson1: settingsForm.contactPerson1,
         contactPerson2: settingsForm.contactPerson2,
+        dueStartDate: Number(settingsForm.dueStartDate),
+        dueWarningDate: Number(settingsForm.dueWarningDate),
+        dueEndDate: Number(settingsForm.dueEndDate),
         updatedAt: new Date().toISOString()
       };
 
@@ -668,12 +765,46 @@ export const AdminDashboard = () => {
                     className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
                   />
                 </div>
-                <button 
-                  onClick={handleUpdateSettings}
-                  className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-100 transition-all"
-                >
-                  <Save className="w-4 h-4 mr-2" /> Save Settings
-                </button>
+                <div className="sm:col-span-4 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-100 mt-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Due Start Date (e.g. 15)</label>
+                    <input 
+                      type="number" 
+                      min="1" max="31"
+                      value={settingsForm.dueStartDate} 
+                      onChange={(e) => setSettingsForm({...settingsForm, dueStartDate: Number(e.target.value)})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Due Warning Date (e.g. 17)</label>
+                    <input 
+                      type="number" 
+                      min="1" max="31"
+                      value={settingsForm.dueWarningDate} 
+                      onChange={(e) => setSettingsForm({...settingsForm, dueWarningDate: Number(e.target.value)})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Due End Date (e.g. 20)</label>
+                    <input 
+                      type="number" 
+                      min="1" max="31"
+                      value={settingsForm.dueEndDate} 
+                      onChange={(e) => setSettingsForm({...settingsForm, dueEndDate: Number(e.target.value)})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="sm:col-span-4 flex justify-end">
+                  <button 
+                    onClick={handleUpdateSettings}
+                    className="inline-flex items-center justify-center px-4 py-2 bg-indigo-50 text-indigo-600 font-semibold rounded-xl hover:bg-indigo-100 transition-all"
+                  >
+                    <Save className="w-4 h-4 mr-2" /> Save Settings
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -984,6 +1115,67 @@ export const AdminDashboard = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* New Emergency Contacts Sub-section */}
+                  <div className="mt-8 border-t border-gray-100 pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Emergency Contacts</h4>
+                        <p className="text-xs text-gray-500">Additional emergence contacts listed below the main cards</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setEditingEmergency(null);
+                          setEmergencyForm({ name: '', position: '', phone: '' });
+                          setIsEmergencyModalOpen(true);
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-1" /> Add New Contact
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {emergencyContacts.map((contact) => (
+                        <div key={contact.id} className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm flex items-start justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">{contact.name}</p>
+                            <p className="text-[10px] font-medium text-indigo-600 uppercase mb-2">{contact.position}</p>
+                            <p className="text-xs text-gray-600 flex items-center">
+                              <Phone className="w-3 h-3 mr-1 text-gray-400" /> {contact.phone}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            <button 
+                              onClick={() => {
+                                setEditingEmergency(contact);
+                                setEmergencyForm({ name: contact.name, position: contact.position, phone: contact.phone });
+                                setIsEmergencyModalOpen(true);
+                              }}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setEmergencyToDelete(contact.id);
+                                setIsConfirmDeleteEmergencyOpen(true);
+                              }}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      {emergencyContacts.length === 0 && (
+                        <div className="col-span-full py-8 text-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                          <Users className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-400">No emergency contacts listed yet</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -1116,19 +1308,19 @@ export const AdminDashboard = () => {
           <div className="p-4 overflow-y-auto flex-grow space-y-3">
             {column3Data.length > 0 ? (
               column3Data.map(member => (
-                <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-red-50 border border-red-100">
+                <div key={member.id} className={`flex items-center justify-between p-2 rounded-xl transition-colors border ${member.dueColorClass}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-red-200 flex items-center justify-center">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-700" />
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${member.iconBgClass}`}>
+                      <AlertTriangle className={`w-3.5 h-3.5 ${member.iconTextClass}`} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-red-900 leading-none">{member.name}</p>
-                      <p className="text-[10px] text-red-600 font-mono mt-1">{member.memberId}</p>
+                      <p className="text-sm font-bold leading-none">{member.name}</p>
+                      <p className="text-[10px] opacity-70 font-mono mt-1">{member.memberId}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-red-700">{formatCurrency(member.totalDue)}</p>
-                    <p className="text-[9px] text-red-600 uppercase font-bold">Total Due</p>
+                    <p className="text-sm font-black">{formatCurrency(member.totalDue)}</p>
+                    <p className={`text-[9px] uppercase font-bold ${member.labelColorClass}`}>Total Due</p>
                   </div>
                 </div>
               ))
@@ -1482,6 +1674,113 @@ export const AdminDashboard = () => {
       </AnimatePresence>
 
       {/* Confirmation Modal */}
+      {/* Add/Edit Emergency Contact Modal */}
+      <AnimatePresence>
+        {isEmergencyModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+            >
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-indigo-600 text-white">
+                <h3 className="text-lg font-bold">
+                  {editingEmergency ? 'Edit Emergency Contact' : 'Add Emergency Contact'}
+                </h3>
+                <button onClick={() => setIsEmergencyModalOpen(false)} className="p-1 hover:bg-indigo-500 rounded-lg">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <form onSubmit={handleSaveEmergency} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={emergencyForm.name} 
+                    onChange={(e) => setEmergencyForm({...emergencyForm, name: e.target.value})}
+                    placeholder="Enter name"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Position / Relation</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={emergencyForm.position} 
+                    onChange={(e) => setEmergencyForm({...emergencyForm, position: e.target.value})}
+                    placeholder="e.g., Physician, Family Member"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                  <input 
+                    required
+                    type="text" 
+                    value={emergencyForm.phone} 
+                    onChange={(e) => setEmergencyForm({...emergencyForm, phone: e.target.value})}
+                    placeholder="Enter phone number"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsEmergencyModalOpen(false)}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-100"
+                  >
+                    {editingEmergency ? 'Update' : 'Save'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Emergency Contact Confirmation Modal */}
+      <AnimatePresence>
+        {isConfirmDeleteEmergencyOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center"
+            >
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Contact?</h3>
+              <p className="text-gray-500 mb-6">Are you sure you want to remove this emergency contact? This action cannot be undone.</p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsConfirmDeleteEmergencyOpen(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleDeleteEmergency}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-lg shadow-red-100"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {isConfirmDeleteOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

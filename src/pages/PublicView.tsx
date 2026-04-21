@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export const PublicView = () => {
-  const { members, transactions, settings, loading, error } = useData();
+  const { members, transactions, settings, emergencyContacts, loading, error } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMemberForDetails, setSelectedMemberForDetails] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -136,7 +136,41 @@ export const PublicView = () => {
     const monthsSinceStart = allMonths.length;
     const expectedTotal = monthsSinceStart * member.monthlyContribution;
     const totalDue = Math.max(0, expectedTotal - member.totalDeposited);
-    return { ...member, totalDue };
+
+    // Calculate color based on day of month
+    const today = currentTime.getDate();
+    const dueStart = settings.dueStartDate || 15;
+    const dueWarning = settings.dueWarningDate || 17;
+    const dueEnd = settings.dueEndDate || 20;
+
+    let dueColorClass = 'bg-red-50 border-red-100 text-red-900'; // Default
+    let iconBgClass = 'bg-red-200';
+    let iconTextClass = 'text-red-700';
+    let labelColorClass = 'text-red-600';
+
+    if (today >= dueEnd) {
+      dueColorClass = 'bg-red-50 border-red-100 text-red-900';
+      iconBgClass = 'bg-red-200';
+      iconTextClass = 'text-red-700';
+      labelColorClass = 'text-red-600';
+    } else if (today >= dueWarning) {
+      dueColorClass = 'bg-blue-50 border-blue-100 text-blue-900';
+      iconBgClass = 'bg-blue-200';
+      iconTextClass = 'text-blue-700';
+      labelColorClass = 'text-blue-600';
+    } else if (today >= dueStart) {
+      dueColorClass = 'bg-yellow-50 border-yellow-100 text-yellow-900';
+      iconBgClass = 'bg-yellow-200';
+      iconTextClass = 'text-yellow-700';
+      labelColorClass = 'text-yellow-600';
+    } else {
+      dueColorClass = 'bg-red-50 border-red-100 text-red-900';
+      iconBgClass = 'bg-red-200';
+      iconTextClass = 'text-red-700';
+      labelColorClass = 'text-red-600';
+    }
+
+    return { ...member, totalDue, dueColorClass, iconBgClass, iconTextClass, labelColorClass };
   }).filter(m => m.totalDue > 0);
 
   return (
@@ -291,19 +325,19 @@ export const PublicView = () => {
           <div className="p-4 overflow-y-auto flex-grow space-y-3">
             {column3Data.length > 0 ? (
               column3Data.map(member => (
-                <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-red-50 border border-red-100">
+                <div key={member.id} className={`flex items-center justify-between p-2 rounded-xl transition-colors border ${member.dueColorClass}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-red-200 flex items-center justify-center">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-700" />
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${member.iconBgClass}`}>
+                      <AlertTriangle className={`w-3.5 h-3.5 ${member.iconTextClass}`} />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-red-900 leading-none">{member.name}</p>
-                      <p className="text-[10px] text-red-600 font-mono mt-1">{member.memberId}</p>
+                      <p className="text-sm font-bold leading-none">{member.name}</p>
+                      <p className="text-[10px] opacity-70 font-mono mt-1">{member.memberId}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-black text-red-700">{formatCurrency(member.totalDue)}</p>
-                    <p className="text-[9px] text-red-600 uppercase font-bold">Total Due</p>
+                    <p className="text-sm font-black">{formatCurrency(member.totalDue)}</p>
+                    <p className={`text-[9px] uppercase font-bold ${member.labelColorClass}`}>Total Due</p>
                   </div>
                 </div>
               ))
@@ -609,6 +643,41 @@ export const PublicView = () => {
               </motion.div>
             )}
           </div>
+
+          {/* Emergency Contacts Section */}
+          {emergencyContacts.length > 0 && (
+            <div className="mt-12">
+              <div className="flex items-center justify-center gap-3 mb-8">
+                <div className="h-px bg-gray-200 flex-grow max-w-[100px]"></div>
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Emergency Contacts</h3>
+                <div className="h-px bg-gray-200 flex-grow max-w-[100px]"></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+                {emergencyContacts.map((contact, idx) => (
+                  <motion.div
+                    key={contact.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    viewport={{ once: true }}
+                    className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow"
+                  >
+                    <div>
+                      <h4 className="text-sm font-black text-gray-900">{contact.name}</h4>
+                      <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">{contact.position}</p>
+                    </div>
+                    <a 
+                      href={`tel:${contact.phone}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors"
+                    >
+                      <Phone className="w-3 h-3" />
+                      {contact.phone}
+                    </a>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -31,6 +31,14 @@ export interface ContactPerson {
   imageUrl: string;
 }
 
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  position: string;
+  phone: string;
+  order: number;
+}
+
 export interface Settings {
   interestRate: number;
   duration: number;
@@ -43,18 +51,25 @@ export interface Settings {
   showContactPersons?: boolean;
   contactPerson1?: ContactPerson;
   contactPerson2?: ContactPerson;
+  dueStartDate?: number;
+  dueWarningDate?: number;
+  dueEndDate?: number;
 }
 
 export const useData = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [settings, setSettings] = useState<Settings>({ 
     interestRate: 5, 
     duration: 12,
     startDate: new Date().toISOString().slice(0, 7), // Default to current month
     announcementSpeed: 40, // Default speed
     tagline1: 'Together Dreams',
-    tagline2: 'Collective savings, strong future'
+    tagline2: 'Collective savings, strong future',
+    dueStartDate: 15,
+    dueWarningDate: 17,
+    dueEndDate: 20
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +78,10 @@ export const useData = () => {
     let membersLoaded = false;
     let transactionsLoaded = false;
     let settingsLoaded = false;
+    let emergencyContactsLoaded = false;
 
     const checkLoading = () => {
-      if (membersLoaded && transactionsLoaded && settingsLoaded) {
+      if (membersLoaded && transactionsLoaded && settingsLoaded && emergencyContactsLoaded) {
         setLoading(false);
       }
     };
@@ -102,12 +118,20 @@ export const useData = () => {
       checkLoading();
     }, handleError);
 
+    const qEmergency = query(collection(db, 'emergencyContacts'), orderBy('order', 'asc'));
+    const unsubEmergency = onSnapshot(qEmergency, (snapshot) => {
+      setEmergencyContacts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EmergencyContact)));
+      emergencyContactsLoaded = true;
+      checkLoading();
+    }, handleError);
+
     return () => {
       unsubMembers();
       unsubTransactions();
       unsubSettings();
+      unsubEmergency();
     };
   }, []);
 
-  return { members, transactions, settings, loading, error };
+  return { members, transactions, settings, emergencyContacts, loading, error };
 };

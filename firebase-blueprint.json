@@ -44,11 +44,25 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["interestRate", "duration", "startDate"]
+    },
+    "EmergencyContact": {
+      "title": "Emergency Contact",
+      "description": "An emergency contact person",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the contact" },
+        "position": { "type": "string", "description": "Job title or relationship" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["name", "position", "phone"]
     }
   },
   "firestore": {
     "/members": { "schema": "Member", "description": "Collection of group members" },
     "/transactions": { "schema": "Transaction", "description": "History of all deposits" },
-    "/settings": { "schema": "Settings", "description": "Global configuration" }
+    "/settings": { "schema": "Settings", "description": "Global configuration" },
+    "/emergencyContacts": { "schema": "EmergencyContact", "description": "Emergency contact persons" }
   }
 }
