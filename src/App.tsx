@@ -5,7 +5,7 @@ import { PublicView } from './pages/PublicView';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { Login } from './pages/Login';
 import { useAuth } from './hooks/useAuth';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, User, Phone } from 'lucide-react';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -46,9 +46,25 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        <footer className="bg-white border-t border-gray-200 py-8 no-print">
-          <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
-            &copy; {new Date().getFullYear()} Savings Group Manager. All rights reserved.
+        <footer className="bg-white border-t border-gray-200 py-10 no-print">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-4 text-gray-500 text-sm">
+            <div className="font-medium">
+              &copy; {new Date().getFullYear()} Dream Development Society. All rights reserved.
+            </div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 pt-4 border-t border-gray-100 w-full max-w-lg">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-indigo-500" />
+                <span className="text-[11px] sm:text-xs">
+                  Developed by <span className="font-bold text-gray-800">Md. Mostafijur Rahman</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="w-4 h-4 text-green-500" />
+                <span className="text-[11px] sm:text-xs">
+                  Phone: <a href="tel:+8801303988226" className="font-bold text-gray-800 hover:text-indigo-600 transition-colors">+8801303988226</a>
+                </span>
+              </div>
+            </div>
           </div>
         </footer>
       </div>

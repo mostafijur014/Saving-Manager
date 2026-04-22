@@ -232,27 +232,31 @@ export const PublicView = () => {
       </div>
 
       {/* Monthly Collection Growth Chart */}
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-10">
-        <h3 className="text-lg font-semibold mb-6">Monthly Collection Growth</h3>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
-              <Tooltip 
-                cursor={{fill: '#f9fafb'}}
-                contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
-              />
-              <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={32}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#4f46e5' : '#c7d2fe'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+      {settings.showPublicGrowthChart !== false && (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-10">
+          <h3 className="text-lg font-semibold mb-6">Monthly Collection Growth</h3>
+          <div className="h-56 overflow-x-auto pb-2 scrollbar-thin">
+            <div style={{ minWidth: chartData.length > 6 ? `${chartData.length * 60}px` : '100%', height: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9ca3af'}} />
+                  <Tooltip 
+                    cursor={{fill: '#f9fafb'}}
+                    contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}}
+                  />
+                  <Bar dataKey="amount" radius={[4, 4, 0, 0]} maxBarSize={32}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index === chartData.length - 1 ? '#4f46e5' : '#c7d2fe'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3-Column Status Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">

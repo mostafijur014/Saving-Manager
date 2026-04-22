@@ -33,17 +33,19 @@
       "description": "Global interest and group settings",
       "type": "object",
       "properties": {
-        "interestRate": { "type": "number", "description": "Annual interest rate in percentage" },
-        "duration": { "type": "number", "description": "Duration in months for DPS calculation" },
+        "interestAmount": { "type": "number", "description": "Fixed total interest amount to be distributed among members" },
+        "duration": { "type": "number", "description": "Duration in months for calculations" },
         "startDate": { "type": "string", "description": "The month the savings group started (e.g., '2023-01')" },
         "announcement": { "type": "string", "description": "Scrolling announcement text" },
         "showAnnouncement": { "type": "boolean", "description": "Whether to show the announcement bar" },
         "announcementSpeed": { "type": "number", "description": "Scrolling speed in seconds (higher is slower)" },
         "tagline1": { "type": "string", "description": "Primary tagline text" },
         "tagline2": { "type": "string", "description": "Secondary tagline text" },
+        "showGrowthChart": { "type": "boolean", "description": "Whether to show chart on admin dashboard" },
+        "showPublicGrowthChart": { "type": "boolean", "description": "Whether to show chart on public page" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["interestRate", "duration", "startDate"]
+      "required": ["interestAmount", "duration", "startDate"]
     },
     "EmergencyContact": {
       "title": "Emergency Contact",

@@ -63,6 +63,8 @@ export interface Settings {
   dueStartDate?: number;
   dueWarningDate?: number;
   dueEndDate?: number;
+  showGrowthChart?: boolean;
+  showPublicGrowthChart?: boolean;
 }
 
 export const useData = () => {
@@ -79,7 +81,9 @@ export const useData = () => {
     tagline2: 'Collective savings, strong future',
     dueStartDate: 15,
     dueWarningDate: 17,
-    dueEndDate: 20
+    dueEndDate: 20,
+    showGrowthChart: true,
+    showPublicGrowthChart: true
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
